@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>NFL Scorebug</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Barlow:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+html, body {
+  margin: 0; padding: 0;
+  background: transparent;
+  width: 100%; height: 100%;
+  overflow: hidden;
+}
+* { box-sizing: border-box; }
+
+.root {
+  position: fixed;
+  bottom: 40px;
+  left: 40px;
+  font-family: 'Barlow', sans-serif;
+  font-weight: 700;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 24px;
+}
+
+.bug {
+  display: flex;
+  align-items: stretch;
+  height: 50px;
+  gap: 10px;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity .4s ease, transform .4s ease;
+  filter: drop-shadow(0 4px 14px rgba(0,0,0,0.7));
+  border-radius: 3px;
+}
+.bug.show { opacity: 1; transform: translateY(0); }
+
+.bug.final .seg-away,
+.bug.final .seg-home { opacity: 0.45; }
+.bug.final .seg-away-score,
+.bug.final .seg-home-score,
+.bug.final .seg-middle { opacity: 0.6; }
+
+.seg {
+  display: flex; align-items: center;
+  justify-content: center; padding: 0;
+  flex-shrink: 0; border-radius: 3px;
+}
+
+.seg-away { width: 105px; height: 50px; background: #e8291c; }
+.away-abbr {
+  font-size: 42px; font-weight: 900;
+  letter-spacing: .02em; color: #fff;
+  text-transform: uppercase;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.seg-away-score { width: 51px; height: 50px; background: #fff; }
+
+.seg-middle {
+  width: 90px; height: 50px; background: #fff;
+  border-left: 1px solid rgba(0,0,0,0.08);
+  border-right: 1px solid rgba(0,0,0,0.08);
+  flex-direction: column;
+  gap: 2px;
+}
+
+.seg-home-score { width: 51px; height: 50px; background: #fff; }
+
+.seg-home { width: 105px; height: 50px; background: #134a8e; }
+.home-abbr {
+  font-size: 42px; font-weight: 900;
+  letter-spacing: .02em; color: #fff;
+  text-transform: uppercase;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.score-num {
+  font-size: 46px; font-weight: 900;
+  color: #000; letter-spacing: -.01em;
+  line-height: 1; transition: color .25s;
+}
+.score-num.flash { animation: scoreFlash .7s ease forwards; }
+@keyframes scoreFlash {
+  0%   { transform: scale(1.5); color: #e05000; }
+  60%  { transform: scale(1.15); color: #e05000; }
+  100% { transform: scale(1); color: #000; }
+}
+
+.quarter-num {
+  font-size: 24px; font-weight: 900;
+  color: #000; line-height: 1;
+}
+.game-clock {
+  font-size: 13px; font-weight: 700;
+  color: rgba(0,0,0,0.55); line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.down-bar {
+  display: flex; align-items: stretch;
+  gap: 10px; margin-top: 10px;
+  filter: drop-shadow(0 4px 14px rgba(0,0,0,0.7));
+  transition: margin-left .3s ease;
+}
+.down-seg {
+  display: flex; align-items: center;
+  justify-content: center;
+  background: #fff; border-radius: 3px;
+  padding: 0 10px; height: 36px;
+  width: 105px; flex-shrink: 0;
+}
+.down-text {
+  font-size: 15px; font-weight: 900;
+  color: #000; text-transform: uppercase;
+  letter-spacing: .04em; white-space: nowrap;
+}
+
+/* ── Config panel ── */
+.config {
+  position: fixed; top: 16px; right: 16px;
+  background: rgba(6,8,12,0.96);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 8px; padding: 16px; width: 280px;
+  font-family: 'Barlow', sans-serif; font-size: 13px;
+  color: #c8d0da; z-index: 999;
+  max-height: calc(100vh - 32px); overflow-y: auto;
+}
+.config h3 {
+  margin: 0 0 12px; font-size: 11px; font-weight: 600;
+  letter-spacing: .12em; text-transform: uppercase;
+  color: rgba(255,255,255,0.38);
+}
+.config h4 {
+  margin: 14px 0 7px; font-size: 10px; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase;
+  color: rgba(255,255,255,0.3);
+  border-top: 1px solid rgba(255,255,255,0.07);
+  padding-top: 11px;
+}
+.cfg-status { display:flex; align-items:center; gap:6px; font-size:11px; color:rgba(255,255,255,0.3); }
+.sdot { width:6px; height:6px; border-radius:50%; background:#22c55e; flex-shrink:0; }
+.sdot.wait { background:#f59e0b; }
+.sdot.err  { background:#ef4444; }
+.divider { height:1px; background:rgba(255,255,255,0.07); margin:12px 0; }
+.obs-tip {
+  margin-top:10px; padding:9px 10px;
+  background:rgba(255,255,255,0.03);
+  border-radius:4px; border-left:2px solid rgba(255,255,255,0.1);
+  font-size:11px; color:rgba(255,255,255,0.3); line-height:1.65;
+}
+.obs-tip b { color:rgba(255,255,255,0.55); }
+body.obs-mode .config { display: none; }
+
+.h4-row { display:flex; align-items:center; justify-content:space-between; margin:14px 0 7px; border-top:1px solid rgba(255,255,255,0.07); padding-top:11px; }
+.h4-row h4 { margin:0; font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:rgba(255,255,255,0.3); border:none; padding:0; }
+.toggle-btn { font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:3px 8px; border-radius:3px; border:1px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.4); cursor:pointer; transition:background .15s, color .15s; }
+.toggle-btn:hover { background:rgba(255,255,255,0.1); color:#fff; }
+.toggle-btn.hidden-state { background:rgba(239,68,68,0.15); border-color:rgba(239,68,68,0.3); color:rgba(239,68,68,0.7); }
+
+/* ── Custom Dropdown ── */
+.custom-select {
+  position: relative; width: 100%; margin-bottom: 8px;
+  user-select: none; z-index: 10;
+}
+.custom-select.open { z-index: 1000; }
+.cs-selected {
+  width: 100%; background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 4px;
+  color: #e0e6ee; font-size: 13px; font-family: 'Barlow', sans-serif;
+  font-weight: 500; padding: 7px 28px 7px 8px; cursor: pointer;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: border-color .15s, background .15s;
+}
+.cs-selected:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.22); }
+.cs-arrow {
+  flex-shrink: 0; width: 10px; height: 10px; margin-left: auto;
+  border-right: 2px solid rgba(255,255,255,0.4);
+  border-bottom: 2px solid rgba(255,255,255,0.4);
+  transform: rotate(45deg) translateY(-2px); transition: transform .15s;
+}
+.custom-select.open .cs-arrow { transform: rotate(-135deg) translateY(-2px); }
+.cs-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+.cs-dropdown {
+  display: none; position: absolute; top: calc(100% + 3px);
+  left: 0; right: 0; background: #0e1420;
+  border: 1px solid rgba(255,255,255,0.13); border-radius: 4px;
+  max-height: 200px; overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.7);
+}
+.custom-select.open .cs-dropdown { display: block; }
+.cs-option {
+  padding: 8px 10px; font-size: 12px; font-family: 'Barlow', sans-serif;
+  color: #c8d0da; cursor: pointer; transition: background .1s;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cs-option:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.cs-option.selected { background: rgba(255,255,255,0.06); color: #fff; font-weight: 600; }
+.cs-option.none-opt { color: rgba(255,255,255,0.3); font-style: italic; }
+.cs-dropdown::-webkit-scrollbar { width: 4px; }
+.cs-dropdown::-webkit-scrollbar-track { background: transparent; }
+.cs-dropdown::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div class="root" id="root"></div>
+
+<div class="config" id="config">
+  <h3>🏈 NFL Scorebug</h3>
+
+  <div class="custom-select" id="rate-dd">
+    <div class="cs-selected"><span class="cs-label">Refresh every 5s</span><span class="cs-arrow"></span></div>
+    <div class="cs-dropdown">
+      <div class="cs-option" data-value="1000">Refresh every 1s</div>
+      <div class="cs-option" data-value="2000">Refresh every 2s</div>
+      <div class="cs-option selected" data-value="5000">Refresh every 5s</div>
+      <div class="cs-option" data-value="10000">Refresh every 10s</div>
+      <div class="cs-option" data-value="15000">Refresh every 15s</div>
+      <div class="cs-option" data-value="30000">Refresh every 30s</div>
+    </div>
+  </div>
+
+  <div class="custom-select" id="delay-dd">
+    <div class="cs-selected"><span class="cs-label">Display delay: 30s</span><span class="cs-arrow"></span></div>
+    <div class="cs-dropdown">
+      <div class="cs-option" data-value="1000">Display delay: 1s</div>
+      <div class="cs-option" data-value="5000">Display delay: 5s</div>
+      <div class="cs-option" data-value="10000">Display delay: 10s</div>
+      <div class="cs-option" data-value="15000">Display delay: 15s</div>
+      <div class="cs-option" data-value="20000">Display delay: 20s</div>
+      <div class="cs-option" data-value="25000">Display delay: 25s</div>
+      <div class="cs-option selected" data-value="30000">Display delay: 30s</div>
+      <div class="cs-option" data-value="35000">Display delay: 35s</div>
+      <div class="cs-option" data-value="40000">Display delay: 40s</div>
+      <div class="cs-option" data-value="45000">Display delay: 45s</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <h4>Bug 1 — Game</h4>
+  <div class="custom-select" id="game-dd-0">
+    <div class="cs-selected"><span class="cs-label">Loading…</span><span class="cs-arrow"></span></div>
+    <div class="cs-dropdown"><div class="cs-option none-opt" data-value="">Loading…</div></div>
+  </div>
+  <div class="cfg-status"><div class="sdot wait" id="sdot-0"></div><span id="stext-0">Connecting…</span></div>
+
+  <div class="h4-row"><h4>Bug 2 — Game</h4><button class="toggle-btn" id="toggle-1" onclick="toggleBug(1)">Hide</button></div>
+  <div class="custom-select" id="game-dd-1">
+    <div class="cs-selected"><span class="cs-label">Loading…</span><span class="cs-arrow"></span></div>
+    <div class="cs-dropdown"><div class="cs-option none-opt" data-value="">Loading…</div></div>
+  </div>
+  <div class="cfg-status"><div class="sdot wait" id="sdot-1"></div><span id="stext-1">Connecting…</span></div>
+
+  <div class="h4-row"><h4>Bug 3 — Game</h4><button class="toggle-btn" id="toggle-2" onclick="toggleBug(2)">Hide</button></div>
+  <div class="custom-select" id="game-dd-2">
+    <div class="cs-selected"><span class="cs-label">Loading…</span><span class="cs-arrow"></span></div>
+    <div class="cs-dropdown"><div class="cs-option none-opt" data-value="">Loading…</div></div>
+  </div>
+  <div class="cfg-status"><div class="sdot wait" id="sdot-2"></div><span id="stext-2">Connecting…</span></div>
+
+  <div class="obs-tip">
+    <b>OBS Browser Source:</b> Local File → this .html<br>
+    Width <b>520</b> · Height <b>400</b><br>
+    ✓ Transparent background<br>
+    Append <b>?obs=1</b> to URL to hide this panel.
+  </div>
+</div>
+
+<script>
+const ESPN = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl';
+let delayMs = 30000;
+let allGames = [];
+
+// ── Team color helpers (ESPN provides hex colors per team) ──
+function teamBg(t) {
+  return '#' + (t.color || '1e2530');
+}
+function teamText(t) {
+  const hex = (t.color || '1e2530');
+  const r = parseInt(hex.slice(0,2),16);
+  const g = parseInt(hex.slice(2,4),16);
+  const b = parseInt(hex.slice(4,6),16);
+  return (0.299*r + 0.587*g + 0.114*b) > 140 ? '#000' : '#fff';
+}
+
+function quarterLabel(period, statusName) {
+  if (statusName === 'STATUS_HALFTIME') return 'HT';
+  if (period <= 4) return 'Q' + period;
+  if (period === 5) return 'OT';
+  return (period - 4) + 'OT';
+}
+
+// ── Custom dropdown logic ──
+function initDropdown(ddEl, onChange) {
+  const selected = ddEl.querySelector('.cs-selected');
+  const label    = ddEl.querySelector('.cs-label');
+  const dropdown = ddEl.querySelector('.cs-dropdown');
+
+  selected.addEventListener('click', e => {
+    e.stopPropagation();
+    document.querySelectorAll('.custom-select.open').forEach(el => {
+      if (el !== ddEl) el.classList.remove('open');
+    });
+    ddEl.classList.toggle('open');
+  });
+
+  dropdown.addEventListener('click', e => {
+    const opt = e.target.closest('.cs-option');
+    if (!opt) return;
+    const val = opt.dataset.value;
+    label.textContent = opt.textContent;
+    dropdown.querySelectorAll('.cs-option').forEach(o => o.classList.remove('selected'));
+    opt.classList.add('selected');
+    ddEl.classList.remove('open');
+    if (onChange) onChange(val);
+  });
+}
+
+document.addEventListener('click', () => {
+  document.querySelectorAll('.custom-select.open').forEach(el => el.classList.remove('open'));
+});
+
+function getDropdownValue(ddEl) {
+  const sel = ddEl.querySelector('.cs-option.selected');
+  return sel ? sel.dataset.value : '';
+}
+
+function populateGameDropdown(ddEl, games, selectedId) {
+  const dropdown = ddEl.querySelector('.cs-dropdown');
+  const labelEl  = ddEl.querySelector('.cs-label');
+  dropdown.innerHTML = '<div class="cs-option none-opt" data-value="">— None —</div>';
+  games.forEach(g => {
+    const opt = document.createElement('div');
+    opt.className = 'cs-option';
+    opt.dataset.value = g.id;
+    const comp = g.competitions[0];
+    const away = comp.competitors.find(c => c.homeAway === 'away');
+    const home = comp.competitors.find(c => c.homeAway === 'home');
+    const aw = away?.team?.abbreviation || '?';
+    const hw = home?.team?.abbreviation || '?';
+    const state = comp.status?.type?.description || 'Scheduled';
+    opt.textContent = `${aw} @ ${hw} — ${state}`;
+    dropdown.appendChild(opt);
+  });
+  const toSelect = dropdown.querySelector(`[data-value="${selectedId}"]`);
+  if (toSelect) {
+    toSelect.classList.add('selected');
+    labelEl.textContent = toSelect.textContent;
+  } else {
+    labelEl.textContent = '— None —';
+    dropdown.querySelector('[data-value=""]').classList.add('selected');
+  }
+}
+
+// ── Build bug HTML ──
+function buildBug(i) {
+  const wrap = document.createElement('div');
+  wrap.id = `wrap-${i}`;
+  wrap.innerHTML = `
+    <div class="bug" id="bug-${i}">
+      <div class="seg seg-away" id="seg-away-${i}">
+        <span class="away-abbr" id="away-abbr-${i}">—</span>
+      </div>
+      <div class="seg seg-away-score">
+        <span class="score-num" id="away-score-${i}">0</span>
+      </div>
+      <div class="seg seg-middle" id="seg-middle-${i}">
+        <div class="quarter-num" id="quarter-${i}">—</div>
+        <div class="game-clock" id="clock-${i}"></div>
+      </div>
+      <div class="seg seg-home-score">
+        <span class="score-num" id="home-score-${i}">0</span>
+      </div>
+      <div class="seg seg-home" id="seg-home-${i}">
+        <span class="home-abbr" id="home-abbr-${i}">—</span>
+      </div>
+    </div>
+    <div class="down-bar" id="down-bar-${i}" style="display:none">
+      <div class="down-seg">
+        <span class="down-text" id="down-text-${i}">—</span>
+      </div>
+    </div>`;
+  document.getElementById('root').appendChild(wrap);
+}
+[0,1,2].forEach(buildBug);
+
+// ── Per-bug state ──
+const bugs = [0,1,2].map(i => ({ idx:i, gameId:null, pollTimer:null, prev:{}, done:false }));
+
+async function apiFetch(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+async function loadSchedule() {
+  bugs.forEach(b => setSt(b.idx, 'wait', 'Loading…'));
+  try {
+    const data = await apiFetch(`${ESPN}/scoreboard`);
+    allGames = data.events || [];
+    if (!allGames.length) {
+      bugs.forEach(b => setSt(b.idx, 'err', 'No games this week'));
+      return;
+    }
+
+    const live    = allGames.filter(g => g.competitions[0].status?.type?.state === 'in');
+    const pool    = live.length >= 3 ? live : allGames;
+
+    [0,1,2].forEach(i => {
+      const g = pool[i] || pool[0];
+      populateGameDropdown(document.getElementById(`game-dd-${i}`), allGames, g.id);
+      watch(bugs[i], g.id);
+    });
+  } catch(e) { bugs.forEach(b => setSt(b.idx, 'err', e.message)); }
+}
+
+function watch(bug, id) {
+  bug.gameId = id || null;
+  bug.prev   = {};
+  bug.done   = false;
+  clearInterval(bug.pollTimer);
+  if (!id) return;
+  poll(bug);
+  const rate = parseInt(getDropdownValue(document.getElementById('rate-dd'))) || 5000;
+  bug.pollTimer = setInterval(() => poll(bug), rate);
+}
+
+async function poll(bug) {
+  if (!bug.gameId) return;
+  try {
+    // Refresh the full scoreboard and extract this game
+    const data  = await apiFetch(`${ESPN}/scoreboard`);
+    allGames    = data.events || [];
+    const event = allGames.find(g => g.id === bug.gameId);
+    if (!event) { setSt(bug.idx, 'err', 'Game not found'); return; }
+
+    if (delayMs > 0) {
+      setTimeout(() => {
+        render(bug, event);
+        setSt(bug.idx, 'ok', `Updated ${new Date().toLocaleTimeString()} (${delayMs/1000}s delay)`);
+      }, delayMs);
+    } else {
+      render(bug, event);
+      setSt(bug.idx, 'ok', `Updated ${new Date().toLocaleTimeString()}`);
+    }
+  } catch(e) { setSt(bug.idx, 'err', e.message); }
+}
+
+function render(bug, event) {
+  const i    = bug.idx;
+  const comp = event.competitions[0];
+  const away = comp.competitors.find(c => c.homeAway === 'away');
+  const home = comp.competitors.find(c => c.homeAway === 'home');
+  const status = comp.status || {};
+  const sit    = comp.situation || {};
+  const statusName = status.type?.name || '';
+  const state      = status.type?.state || 'pre';
+
+  const awayAbbr  = away.team.abbreviation;
+  const homeAbbr  = home.team.abbreviation;
+  const awayScore = parseInt(away.score || '0', 10);
+  const homeScore = parseInt(home.score || '0', 10);
+
+  // Team colors from ESPN
+  document.getElementById(`seg-away-${i}`).style.background = teamBg(away.team);
+  document.getElementById(`seg-home-${i}`).style.background = teamBg(home.team);
+  document.getElementById(`away-abbr-${i}`).style.color = teamText(away.team);
+  document.getElementById(`home-abbr-${i}`).style.color = teamText(home.team);
+  document.getElementById(`away-abbr-${i}`).textContent = awayAbbr;
+  document.getElementById(`home-abbr-${i}`).textContent = homeAbbr;
+
+  const awayEl = document.getElementById(`away-score-${i}`);
+  const homeEl = document.getElementById(`home-score-${i}`);
+  if (bug.prev.away !== undefined && awayScore > bug.prev.away) flashEl(awayEl);
+  if (bug.prev.home !== undefined && homeScore > bug.prev.home) flashEl(homeEl);
+  awayEl.textContent = awayScore;
+  homeEl.textContent = homeScore;
+  bug.prev = { away: awayScore, home: homeScore };
+
+  const quarterEl = document.getElementById(`quarter-${i}`);
+  const clockEl   = document.getElementById(`clock-${i}`);
+  const bugEl     = document.getElementById(`bug-${i}`);
+  const downBar   = document.getElementById(`down-bar-${i}`);
+
+  const isFinal    = state === 'post' || status.type?.completed;
+  const isLive     = state === 'in';
+  const isHalftime = statusName === 'STATUS_HALFTIME';
+
+  if (isFinal) {
+    quarterEl.textContent = 'F';
+    clockEl.textContent   = '';
+    bugEl.classList.add('show', 'final');
+    downBar.style.display = 'none';
+    if (!bug.done) {
+      bug.done = true;
+      clearInterval(bug.pollTimer);
+      bug.pollTimer = null;
+      setTimeout(() => autoReplace(bug), 10000);
+    }
+  } else if (isLive || isHalftime) {
+    quarterEl.textContent = quarterLabel(status.period || 1, statusName);
+    clockEl.textContent   = isHalftime ? '' : (status.displayClock || '');
+    bugEl.classList.add('show');
+    bugEl.classList.remove('final');
+
+    // Down & distance bar
+    const downTxt = sit.shortDownDistanceText || '';
+    if (downTxt && !isHalftime) {
+      document.getElementById(`down-text-${i}`).textContent = downTxt.toUpperCase();
+      downBar.style.display = '';
+
+      // Shift bar under the team with possession
+      // home team panel starts at: 105+10+51+10+90+10+51+10 = 337px
+      const homePossession = sit.possession && sit.possession === home.team.id;
+      downBar.style.marginLeft = homePossession ? '337px' : '0px';
+    } else {
+      downBar.style.display = 'none';
+    }
+  } else {
+    // Pre-game: show scheduled time
+    const gameTime = event.date ? new Date(event.date).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}) : 'PRE';
+    quarterEl.textContent = gameTime;
+    clockEl.textContent   = '';
+    bugEl.classList.add('show');
+    bugEl.classList.remove('final');
+    downBar.style.display = 'none';
+  }
+}
+
+function autoReplace(bug) {
+  if (!allGames.length) return;
+  const watchedIds = new Set(bugs.map(b => b.gameId).filter(Boolean));
+  const candidates = allGames.filter(g => !watchedIds.has(g.id));
+  if (!candidates.length) return;
+  const live    = candidates.filter(g => g.competitions[0].status?.type?.state === 'in');
+  const pre     = candidates.filter(g => g.competitions[0].status?.type?.state === 'pre');
+  const next    = live[0] || pre[0] || candidates[0];
+  populateGameDropdown(document.getElementById(`game-dd-${bug.idx}`), allGames, next.id);
+  watch(bug, next.id);
+}
+
+function toggleBug(i) {
+  const wrap = document.getElementById(`wrap-${i}`);
+  const btn  = document.getElementById(`toggle-${i}`);
+  const hidden = wrap.style.display === 'none';
+  wrap.style.display = hidden ? '' : 'none';
+  btn.textContent = hidden ? 'Hide' : 'Show';
+  btn.classList.toggle('hidden-state', !hidden);
+}
+
+function flashEl(el) {
+  el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+}
+function setSt(idx, type, msg) {
+  document.getElementById(`sdot-${idx}`).className = 'sdot' + (type === 'ok' ? '' : ' ' + type);
+  document.getElementById(`stext-${idx}`).textContent = msg;
+}
+
+// ── Wire up dropdowns ──
+initDropdown(document.getElementById('rate-dd'), () => {
+  bugs.forEach(b => { if (b.gameId) watch(b, b.gameId); });
+});
+initDropdown(document.getElementById('delay-dd'), val => {
+  delayMs = parseInt(val) || 0;
+});
+[0,1,2].forEach(i => {
+  initDropdown(document.getElementById(`game-dd-${i}`), val => {
+    watch(bugs[i], val);
+  });
+});
+
+// ── Daily 3am refresh ──
+function schedule3amRefresh() {
+  const now  = new Date();
+  const next = new Date(now);
+  next.setHours(3, 0, 0, 0);
+  if (next <= now) next.setDate(next.getDate() + 1);
+  setTimeout(() => {
+    loadSchedule();
+    setInterval(loadSchedule, 24 * 60 * 60 * 1000);
+  }, next - now);
+}
+
+if (new URLSearchParams(location.search).get('obs') === '1') document.body.classList.add('obs-mode');
+
+loadSchedule();
+schedule3amRefresh();
+</script>
+</body>
+</html>
