@@ -93,29 +93,19 @@ html, body {
   font-size: 24px; font-weight: 900;
   color: #000; line-height: 1;
 }
-.game-clock {
-  font-size: 13px; font-weight: 700;
-  color: rgba(0,0,0,0.55); line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-
-.down-bar {
-  display: flex; align-items: stretch;
-  gap: 10px; margin-top: 10px;
-  filter: drop-shadow(0 4px 14px rgba(0,0,0,0.7));
-  transition: margin-left .3s ease;
-}
-.down-seg {
+.down-row {
   display: flex; align-items: center;
-  justify-content: center;
-  background: #fff; border-radius: 3px;
-  padding: 0 10px; height: 36px;
-  width: 105px; flex-shrink: 0;
+  justify-content: center; gap: 5px;
+}
+.poss-dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  flex-shrink: 0; background: rgba(0,0,0,0.12);
+  transition: background .25s;
 }
 .down-text {
-  font-size: 15px; font-weight: 900;
+  font-size: 12px; font-weight: 900;
   color: #000; text-transform: uppercase;
-  letter-spacing: .04em; white-space: nowrap;
+  letter-spacing: .04em; white-space: nowrap; line-height: 1;
 }
 
 /* ── Config panel ── */
@@ -371,7 +361,10 @@ function buildBug(i) {
       </div>
       <div class="seg seg-middle" id="seg-middle-${i}">
         <div class="quarter-num" id="quarter-${i}">—</div>
-        <div class="game-clock" id="clock-${i}"></div>
+        <div class="down-row" id="down-row-${i}" style="display:none">
+          <div class="poss-dot" id="poss-dot-${i}"></div>
+          <span class="down-text" id="down-text-${i}"></span>
+        </div>
       </div>
       <div class="seg seg-home-score">
         <span class="score-num" id="home-score-${i}">0</span>
@@ -380,11 +373,7 @@ function buildBug(i) {
         <span class="home-abbr" id="home-abbr-${i}">—</span>
       </div>
     </div>
-    <div class="down-bar" id="down-bar-${i}" style="display:none">
-      <div class="down-seg">
-        <span class="down-text" id="down-text-${i}">—</span>
-      </div>
-    </div>`;
+    `;
   document.getElementById('root').appendChild(wrap);
 }
 [0,1,2].forEach(buildBug);
@@ -483,9 +472,10 @@ function render(bug, event) {
   bug.prev = { away: awayScore, home: homeScore };
 
   const quarterEl = document.getElementById(`quarter-${i}`);
-  const clockEl   = document.getElementById(`clock-${i}`);
+  const downRow   = document.getElementById(`down-row-${i}`);
+  const downTxtEl = document.getElementById(`down-text-${i}`);
+  const possDot   = document.getElementById(`poss-dot-${i}`);
   const bugEl     = document.getElementById(`bug-${i}`);
-  const downBar   = document.getElementById(`down-bar-${i}`);
 
   const isFinal    = state === 'post' || status.type?.completed;
   const isLive     = state === 'in';
@@ -493,9 +483,8 @@ function render(bug, event) {
 
   if (isFinal) {
     quarterEl.textContent = 'F';
-    clockEl.textContent   = '';
+    downRow.style.display = 'none';
     bugEl.classList.add('show', 'final');
-    downBar.style.display = 'none';
     if (!bug.done) {
       bug.done = true;
       clearInterval(bug.pollTimer);
@@ -504,31 +493,24 @@ function render(bug, event) {
     }
   } else if (isLive || isHalftime) {
     quarterEl.textContent = quarterLabel(status.period || 1, statusName);
-    clockEl.textContent   = isHalftime ? '' : (status.displayClock || '');
     bugEl.classList.add('show');
     bugEl.classList.remove('final');
 
-    // Down & distance bar
     const downTxt = sit.shortDownDistanceText || '';
     if (downTxt && !isHalftime) {
-      document.getElementById(`down-text-${i}`).textContent = downTxt.toUpperCase();
-      downBar.style.display = '';
-
-      // Shift bar under the team with possession
-      // home team panel starts at: 105+10+51+10+90+10+51+10 = 337px
-      const homePossession = sit.possession && sit.possession === home.team.id;
-      downBar.style.marginLeft = homePossession ? '337px' : '0px';
+      downTxtEl.textContent = downTxt.toUpperCase();
+      const possTeam = sit.possession === home.team.id ? home.team : away.team;
+      possDot.style.background = teamBg(possTeam);
+      downRow.style.display = '';
     } else {
-      downBar.style.display = 'none';
+      downRow.style.display = 'none';
     }
   } else {
-    // Pre-game: show scheduled time
     const gameTime = event.date ? new Date(event.date).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}) : 'PRE';
     quarterEl.textContent = gameTime;
-    clockEl.textContent   = '';
+    downRow.style.display = 'none';
     bugEl.classList.add('show');
     bugEl.classList.remove('final');
-    downBar.style.display = 'none';
   }
 }
 
