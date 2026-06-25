@@ -3,156 +3,146 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>NFL Scorebug — Host</title>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Barlow:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<title>NFL Scorebug Control</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-body{background:#0a0a0a;color:#fff;font-family:'Barlow',sans-serif;min-height:100vh;font-size:13px;}
-nav{display:flex;align-items:center;gap:14px;padding:11px 20px;border-bottom:1px solid #1a1a1a;flex-wrap:wrap;}
-.nav-logo{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;letter-spacing:1px;}
-.nav-logo span{color:#e63946;}
-.nav-tag{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#333;padding:3px 8px;border:1px solid #222;border-radius:3px;}
-.topic-bar{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-.topic-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#333;}
-.topic-input{font-family:'Barlow',sans-serif;font-size:12px;background:#111;color:#fff;border:1px solid #222;padding:5px 9px;border-radius:3px;outline:none;width:160px;transition:border-color .2s;}
-.topic-input:focus{border-color:#e63946;}
-.copy-btn{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:11px;letter-spacing:1px;background:transparent;color:#555;border:1px solid #222;padding:5px 10px;border-radius:3px;cursor:pointer;transition:all .15s;white-space:nowrap;}
-.copy-btn:hover{color:#fff;border-color:#444;}
-#ntfyStatus{font-size:9px;letter-spacing:1px;color:#333;min-width:60px;}
+body{background:#0d0d0d;color:#fff;font-family:'Barlow',sans-serif;min-height:100vh;padding:32px 0 60px;}
 
-.layout{display:flex;gap:0;height:calc(100vh - 50px);}
+.page{max-width:500px;margin:0 auto;padding:0 20px;}
 
-/* ── Preview panel ── */
-.preview{flex:1;background:#111;display:flex;align-items:flex-end;padding:40px;position:relative;overflow:hidden;}
-.preview-label{position:absolute;top:14px;left:20px;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#333;}
+.page-header{display:flex;align-items:center;gap:10px;margin-bottom:28px;}
+.page-header h1{font-size:13px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,0.55);}
 
-/* Bug styles (same as display) */
-.root{display:flex;flex-direction:column-reverse;gap:24px;}
-.bug{display:flex;align-items:stretch;height:50px;gap:10px;opacity:0;transform:translateY(8px);transition:opacity .4s ease,transform .4s ease;filter:drop-shadow(0 4px 14px rgba(0,0,0,0.7));border-radius:3px;}
-.bug.show{opacity:1;transform:translateY(0);}
-.bug.final .seg-away,.bug.final .seg-home{opacity:0.45;}
-.bug.final .seg-away-score,.bug.final .seg-home-score,.bug.final .seg-middle{opacity:0.6;}
-.seg{display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0;border-radius:3px;}
-.seg-away{width:105px;height:50px;}
-.away-abbr{font-size:42px;font-weight:900;letter-spacing:.02em;color:#fff;text-transform:uppercase;text-shadow:0 1px 3px rgba(0,0,0,0.3);}
-.seg-away-score{width:51px;height:50px;background:#fff;}
-.seg-middle{width:90px;height:50px;background:#fff;border-left:1px solid rgba(0,0,0,0.08);border-right:1px solid rgba(0,0,0,0.08);flex-direction:column;gap:2px;}
-.seg-home-score{width:51px;height:50px;background:#fff;}
-.seg-home{width:105px;height:50px;}
-.home-abbr{font-size:42px;font-weight:900;letter-spacing:.02em;color:#fff;text-transform:uppercase;text-shadow:0 1px 3px rgba(0,0,0,0.3);}
-.score-num{font-size:46px;font-weight:900;color:#000;letter-spacing:-.01em;line-height:1;transition:color .25s;}
-.score-num.flash{animation:scoreFlash .7s ease forwards;}
-@keyframes scoreFlash{0%{transform:scale(1.5);color:#e05000;}60%{transform:scale(1.15);color:#e05000;}100%{transform:scale(1);color:#000;}}
-.quarter-num{font-size:24px;font-weight:900;color:#000;line-height:1;}
-.down-row{display:flex;align-items:center;justify-content:center;gap:5px;}
-.poss-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;background:rgba(0,0,0,0.12);transition:background .25s;}
-.down-text{font-size:12px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;line-height:1;}
+.card{background:#161616;border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:20px;margin-bottom:14px;}
+.card-label{font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:14px;}
 
-/* ── Config panel ── */
-.config{width:300px;background:#0e0e0e;border-left:1px solid #1a1a1a;padding:20px;overflow-y:auto;}
-.config h3{margin:0 0 14px;font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,0.38);}
-.config h4{margin:14px 0 7px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.3);border-top:1px solid rgba(255,255,255,0.07);padding-top:11px;}
-.cfg-status{display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,0.3);}
-.sdot{width:6px;height:6px;border-radius:50%;background:#22c55e;flex-shrink:0;}
+.field-row{display:flex;flex-direction:column;gap:5px;margin-bottom:12px;}
+.field-row:last-child{margin-bottom:0;}
+.field-label{font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,0.3);}
+.field-input{width:100%;background:#0d0d0d;border:1px solid rgba(255,255,255,0.1);border-radius:5px;padding:9px 12px;color:#fff;font-family:'Barlow',sans-serif;font-size:14px;outline:none;transition:border-color .15s;}
+.field-input:focus{border-color:rgba(255,255,255,0.3);}
+.url-row{display:flex;gap:8px;align-items:stretch;}
+.url-box{flex:1;background:#0d0d0d;border:1px solid rgba(255,255,255,0.08);border-radius:5px;padding:9px 12px;font-size:11px;color:rgba(255,255,255,0.35);font-family:'Barlow',sans-serif;word-break:break-all;line-height:1.4;}
+.copy-btn{font-family:'Barlow',sans-serif;font-weight:700;font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.5);border:1px solid rgba(255,255,255,0.12);border-radius:5px;padding:0 16px;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s;flex-shrink:0;}
+.copy-btn:hover{background:rgba(255,255,255,0.13);color:#fff;}
+
+.settings-row{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+.settings-row:last-child{margin-bottom:0;}
+.settings-label{font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,0.3);min-width:60px;}
+.settings-select{flex:1;background:#0d0d0d;border:1px solid rgba(255,255,255,0.1);border-radius:5px;padding:8px 10px;color:#fff;font-family:'Barlow',sans-serif;font-size:13px;outline:none;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23666'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;transition:border-color .15s;}
+.settings-select:focus{border-color:rgba(255,255,255,0.3);}
+.settings-select option{background:#161616;}
+
+.bug-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.bug-card-left{display:flex;align-items:center;gap:10px;}
+.bug-label{font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,0.3);}
+.status-row{display:flex;align-items:center;gap:6px;}
+.sdot{width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0;}
 .sdot.wait{background:#f59e0b;}.sdot.err{background:#ef4444;}
-.divider{height:1px;background:rgba(255,255,255,0.07);margin:12px 0;}
-.h4-row{display:flex;align-items:center;justify-content:space-between;margin:14px 0 7px;border-top:1px solid rgba(255,255,255,0.07);padding-top:11px;}
-.h4-row h4{margin:0;border:none;padding:0;}
-.toggle-btn{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:3px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.4);cursor:pointer;transition:background .15s,color .15s;}
-.toggle-btn:hover{background:rgba(255,255,255,0.1);color:#fff;}
-.toggle-btn.hidden-state{background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.3);color:rgba(239,68,68,0.7);}
+.status-text{font-size:11px;color:rgba(255,255,255,0.35);}
+.hide-btn{font-family:'Barlow',sans-serif;font-weight:700;font-size:10px;letter-spacing:.1em;text-transform:uppercase;background:transparent;color:rgba(255,255,255,0.3);border:1px solid rgba(255,255,255,0.12);border-radius:4px;padding:3px 10px;cursor:pointer;transition:all .15s;}
+.hide-btn:hover{color:#fff;border-color:rgba(255,255,255,0.3);}
+.hide-btn.hidden-state{background:rgba(239,68,68,0.12);border-color:rgba(239,68,68,0.25);color:rgba(239,68,68,0.6);}
+.game-select{width:100%;background:#0d0d0d;border:1px solid rgba(255,255,255,0.1);border-radius:5px;padding:9px 10px;color:#fff;font-family:'Barlow',sans-serif;font-size:13px;outline:none;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23666'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;transition:border-color .15s;}
+.game-select:focus{border-color:rgba(255,255,255,0.3);}
+.game-select option{background:#161616;}
 
-/* Custom dropdowns */
-.custom-select{position:relative;width:100%;margin-bottom:8px;user-select:none;z-index:10;}
-.custom-select.open{z-index:1000;}
-.cs-selected{width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:4px;color:#e0e6ee;font-size:13px;font-family:'Barlow',sans-serif;font-weight:500;padding:7px 28px 7px 8px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:border-color .15s,background .15s;}
-.cs-selected:hover{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.22);}
-.cs-arrow{flex-shrink:0;width:10px;height:10px;margin-left:auto;border-right:2px solid rgba(255,255,255,0.4);border-bottom:2px solid rgba(255,255,255,0.4);transform:rotate(45deg) translateY(-2px);transition:transform .15s;}
-.custom-select.open .cs-arrow{transform:rotate(-135deg) translateY(-2px);}
-.cs-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;}
-.cs-dropdown{display:none;position:absolute;top:calc(100% + 3px);left:0;right:0;background:#0e1420;border:1px solid rgba(255,255,255,0.13);border-radius:4px;max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.7);}
-.custom-select.open .cs-dropdown{display:block;}
-.cs-option{padding:8px 10px;font-size:12px;font-family:'Barlow',sans-serif;color:#c8d0da;cursor:pointer;transition:background .1s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.cs-option:hover{background:rgba(255,255,255,0.08);color:#fff;}
-.cs-option.selected{background:rgba(255,255,255,0.06);color:#fff;font-weight:600;}
-.cs-option.none-opt{color:rgba(255,255,255,0.3);font-style:italic;}
-.cs-dropdown::-webkit-scrollbar{width:4px;}
-.cs-dropdown::-webkit-scrollbar-track{background:transparent;}
-.cs-dropdown::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.15);border-radius:2px;}
+#pushStatus{text-align:center;font-size:11px;color:rgba(255,255,255,0.2);margin-top:20px;letter-spacing:.02em;}
+#pushStatus.ok{color:#22c55e;}
+#pushStatus.err{color:#ef4444;}
 </style>
 </head>
 <body>
-<nav>
-  <div class="nav-logo">NFL <span>SCOREBUG</span></div>
-  <div class="nav-tag">Host</div>
-  <div class="topic-bar">
-    <span class="topic-label">Topic</span>
-    <input class="topic-input" id="topicInput" type="text" placeholder="my-scorebug-topic" oninput="saveTopic()"/>
-    <button class="copy-btn" onclick="copyObsUrl()">Copy OBS URL</button>
-    <span id="ntfyStatus"></span>
-  </div>
-</nav>
+<div class="page">
 
-<div class="layout">
-  <div class="preview">
-    <span class="preview-label">Preview</span>
-    <div class="root" id="root"></div>
+  <div class="page-header">
+    <span>🏈</span>
+    <h1>NFL Scorebug Control</h1>
   </div>
 
-  <div class="config">
-    <h3>🏈 Settings</h3>
-
-    <div class="custom-select" id="rate-dd">
-      <div class="cs-selected"><span class="cs-label">Refresh every 5s</span><span class="cs-arrow"></span></div>
-      <div class="cs-dropdown">
-        <div class="cs-option" data-value="1000">Refresh every 1s</div>
-        <div class="cs-option" data-value="2000">Refresh every 2s</div>
-        <div class="cs-option selected" data-value="5000">Refresh every 5s</div>
-        <div class="cs-option" data-value="10000">Refresh every 10s</div>
-        <div class="cs-option" data-value="15000">Refresh every 15s</div>
-        <div class="cs-option" data-value="30000">Refresh every 30s</div>
+  <!-- Connection -->
+  <div class="card">
+    <div class="card-label">Connection</div>
+    <div class="field-row">
+      <div class="field-label">Topic</div>
+      <input class="field-input" id="topicInput" type="text" placeholder="my-scorebug-topic" oninput="onTopicChange()"/>
+    </div>
+    <div class="field-row">
+      <div class="url-row">
+        <div class="url-box" id="urlBox">Enter a topic above to generate the OBS URL</div>
+        <button class="copy-btn" onclick="copyObsUrl()">Copy</button>
       </div>
     </div>
+  </div>
 
-    <div class="custom-select" id="delay-dd">
-      <div class="cs-selected"><span class="cs-label">Display delay: 30s</span><span class="cs-arrow"></span></div>
-      <div class="cs-dropdown">
-        <div class="cs-option" data-value="0">No delay</div>
-        <div class="cs-option" data-value="5000">Display delay: 5s</div>
-        <div class="cs-option" data-value="10000">Display delay: 10s</div>
-        <div class="cs-option" data-value="15000">Display delay: 15s</div>
-        <div class="cs-option" data-value="20000">Display delay: 20s</div>
-        <div class="cs-option" data-value="25000">Display delay: 25s</div>
-        <div class="cs-option selected" data-value="30000">Display delay: 30s</div>
-        <div class="cs-option" data-value="35000">Display delay: 35s</div>
-        <div class="cs-option" data-value="40000">Display delay: 40s</div>
-        <div class="cs-option" data-value="45000">Display delay: 45s</div>
+  <!-- Settings -->
+  <div class="card">
+    <div class="card-label">Settings</div>
+    <div class="settings-row">
+      <span class="settings-label">Refresh</span>
+      <select class="settings-select" id="rateSel" onchange="onRateChange()">
+        <option value="1000">Every 1s</option>
+        <option value="2000">Every 2s</option>
+        <option value="5000" selected>Every 5s</option>
+        <option value="10000">Every 10s</option>
+        <option value="15000">Every 15s</option>
+        <option value="30000">Every 30s</option>
+      </select>
+    </div>
+    <div class="settings-row">
+      <span class="settings-label">Delay</span>
+      <select class="settings-select" id="delaySel" onchange="onDelayChange()">
+        <option value="0">No delay</option>
+        <option value="5000">5s</option>
+        <option value="10000">10s</option>
+        <option value="15000">15s</option>
+        <option value="20000">20s</option>
+        <option value="25000">25s</option>
+        <option value="30000" selected>30s</option>
+        <option value="35000">35s</option>
+        <option value="40000">40s</option>
+        <option value="45000">45s</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Bug 1 -->
+  <div class="card">
+    <div class="bug-card-header">
+      <div class="bug-card-left">
+        <span class="bug-label">Bug 1</span>
+        <div class="status-row"><div class="sdot wait" id="sdot-0"></div><span class="status-text" id="stext-0">Connecting…</span></div>
       </div>
     </div>
-
-    <div class="divider"></div>
-
-    <h4>Bug 1 — Game</h4>
-    <div class="custom-select" id="game-dd-0">
-      <div class="cs-selected"><span class="cs-label">Loading…</span><span class="cs-arrow"></span></div>
-      <div class="cs-dropdown"><div class="cs-option none-opt" data-value="">Loading…</div></div>
-    </div>
-    <div class="cfg-status"><div class="sdot wait" id="sdot-0"></div><span id="stext-0">Connecting…</span></div>
-
-    <div class="h4-row"><h4>Bug 2 — Game</h4><button class="toggle-btn" id="toggle-1" onclick="toggleBug(1)">Hide</button></div>
-    <div class="custom-select" id="game-dd-1">
-      <div class="cs-selected"><span class="cs-label">Loading…</span><span class="cs-arrow"></span></div>
-      <div class="cs-dropdown"><div class="cs-option none-opt" data-value="">Loading…</div></div>
-    </div>
-    <div class="cfg-status"><div class="sdot wait" id="sdot-1"></div><span id="stext-1">Connecting…</span></div>
-
-    <div class="h4-row"><h4>Bug 3 — Game</h4><button class="toggle-btn" id="toggle-2" onclick="toggleBug(2)">Hide</button></div>
-    <div class="custom-select" id="game-dd-2">
-      <div class="cs-selected"><span class="cs-label">Loading…</span><span class="cs-arrow"></span></div>
-      <div class="cs-dropdown"><div class="cs-option none-opt" data-value="">Loading…</div></div>
-    </div>
-    <div class="cfg-status"><div class="sdot wait" id="sdot-2"></div><span id="stext-2">Connecting…</span></div>
+    <select class="game-select" id="game-sel-0" onchange="onGameChange(0)"><option value="">Loading…</option></select>
   </div>
+
+  <!-- Bug 2 -->
+  <div class="card">
+    <div class="bug-card-header">
+      <div class="bug-card-left">
+        <span class="bug-label">Bug 2</span>
+        <div class="status-row"><div class="sdot wait" id="sdot-1"></div><span class="status-text" id="stext-1">Connecting…</span></div>
+      </div>
+      <button class="hide-btn" id="toggle-1" onclick="toggleBug(1)">Hide</button>
+    </div>
+    <select class="game-select" id="game-sel-1" onchange="onGameChange(1)"><option value="">Loading…</option></select>
+  </div>
+
+  <!-- Bug 3 -->
+  <div class="card">
+    <div class="bug-card-header">
+      <div class="bug-card-left">
+        <span class="bug-label">Bug 3</span>
+        <div class="status-row"><div class="sdot wait" id="sdot-2"></div><span class="status-text" id="stext-2">Connecting…</span></div>
+      </div>
+      <button class="hide-btn" id="toggle-2" onclick="toggleBug(2)">Hide</button>
+    </div>
+    <select class="game-select" id="game-sel-2" onchange="onGameChange(2)"><option value="">Loading…</option></select>
+  </div>
+
+  <div id="pushStatus"></div>
 </div>
 
 <script>
@@ -160,10 +150,22 @@ const ESPN = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl';
 const DISPLAY_BASE = 'https://chrisgrimm-jm.github.io/NFL-Stream-Scorebug/display.html';
 let delayMs = 30000;
 let allGames = [];
+const lastEvents = [null, null, null];
 
-// ── ntfy ──────────────────────────────────────────────────────────────────────
 function getTopic(){ return document.getElementById('topicInput').value.trim(); }
-function saveTopic(){ localStorage.setItem('nfl_topic', getTopic()); }
+
+function onTopicChange(){
+  localStorage.setItem('nfl_topic', getTopic());
+  updateUrlBox();
+}
+
+function updateUrlBox(){
+  const topic = getTopic();
+  const box = document.getElementById('urlBox');
+  box.textContent = topic
+    ? DISPLAY_BASE + '?topic=' + encodeURIComponent(topic)
+    : 'Enter a topic above to generate the OBS URL';
+}
 
 function copyObsUrl(){
   const topic = getTopic();
@@ -180,26 +182,22 @@ function copyObsUrl(){
 async function publish(state){
   const topic = getTopic();
   if(!topic) return;
-  const statusEl = document.getElementById('ntfyStatus');
-  statusEl.textContent = 'sending…';
-  statusEl.style.color = '#555';
+  const el = document.getElementById('pushStatus');
   try {
-    await fetch('https://ntfy.sh/' + topic, {
-      method: 'POST',
-      body: JSON.stringify(state)
-    });
-    statusEl.textContent = 'sent ✓';
-    statusEl.style.color = '#22c55e';
-    setTimeout(()=>{ statusEl.textContent = ''; }, 2000);
+    await fetch('https://ntfy.sh/' + topic, { method:'POST', body:JSON.stringify(state) });
+    el.className = 'ok';
+    el.textContent = 'Config pushed · ' + new Date().toLocaleTimeString();
   } catch(e){
-    statusEl.textContent = 'error';
-    statusEl.style.color = '#ef4444';
+    el.className = 'err';
+    el.textContent = 'Push failed · ' + e.message;
   }
 }
 
-(function(){ const t = localStorage.getItem('nfl_topic'); if(t) document.getElementById('topicInput').value = t; })();
+(function(){
+  const t = localStorage.getItem('nfl_topic');
+  if(t){ document.getElementById('topicInput').value = t; updateUrlBox(); }
+})();
 
-// ── Team color helpers ──
 function teamBg(t){ return '#' + (t.color || '1e2530'); }
 function teamText(t){
   const hex = t.color || '1e2530';
@@ -213,220 +211,133 @@ function quarterLabel(period, statusName){
   return (period-4)+'OT';
 }
 
-// ── Custom dropdown ──
-function initDropdown(ddEl, onChange){
-  const selected = ddEl.querySelector('.cs-selected');
-  const label    = ddEl.querySelector('.cs-label');
-  const dropdown = ddEl.querySelector('.cs-dropdown');
-  selected.addEventListener('click', e=>{
-    e.stopPropagation();
-    document.querySelectorAll('.custom-select.open').forEach(el=>{ if(el!==ddEl) el.classList.remove('open'); });
-    ddEl.classList.toggle('open');
-  });
-  dropdown.addEventListener('click', e=>{
-    const opt = e.target.closest('.cs-option');
-    if(!opt) return;
-    label.textContent = opt.textContent;
-    dropdown.querySelectorAll('.cs-option').forEach(o=>o.classList.remove('selected'));
-    opt.classList.add('selected');
-    ddEl.classList.remove('open');
-    if(onChange) onChange(opt.dataset.value);
-  });
-}
-document.addEventListener('click', ()=>{ document.querySelectorAll('.custom-select.open').forEach(el=>el.classList.remove('open')); });
-function getDropdownValue(ddEl){ const sel=ddEl.querySelector('.cs-option.selected'); return sel?sel.dataset.value:''; }
+const bugs = [0,1,2].map(i=>({idx:i, gameId:null, pollTimer:null, prev:{}, done:false, visible:true}));
 
-function populateGameDropdown(ddEl, games, selectedId){
-  const dropdown = ddEl.querySelector('.cs-dropdown');
-  const labelEl  = ddEl.querySelector('.cs-label');
-  dropdown.innerHTML = '<div class="cs-option none-opt" data-value="">— None —</div>';
-  games.forEach(g=>{
-    const opt=document.createElement('div');
-    opt.className='cs-option'; opt.dataset.value=g.id;
-    const comp=g.competitions[0];
-    const away=comp.competitors.find(c=>c.homeAway==='away');
-    const home=comp.competitors.find(c=>c.homeAway==='home');
-    const state=comp.status?.type?.description||'Scheduled';
-    opt.textContent=`${away?.team?.abbreviation||'?'} @ ${home?.team?.abbreviation||'?'} — ${state}`;
-    dropdown.appendChild(opt);
-  });
-  const toSelect=dropdown.querySelector(`[data-value="${selectedId}"]`);
-  if(toSelect){ toSelect.classList.add('selected'); labelEl.textContent=toSelect.textContent; }
-  else { labelEl.textContent='— None —'; dropdown.querySelector('[data-value=""]').classList.add('selected'); }
+function setSt(idx, type, msg){
+  document.getElementById(`sdot-${idx}`).className = 'sdot' + (type==='ok' ? '' : ' '+type);
+  document.getElementById(`stext-${idx}`).textContent = msg;
 }
-
-// ── Build bug HTML ──
-function buildBug(i){
-  const wrap=document.createElement('div');
-  wrap.id=`wrap-${i}`;
-  wrap.innerHTML=`
-    <div class="bug" id="bug-${i}">
-      <div class="seg seg-away" id="seg-away-${i}"><span class="away-abbr" id="away-abbr-${i}">—</span></div>
-      <div class="seg seg-away-score"><span class="score-num" id="away-score-${i}">0</span></div>
-      <div class="seg seg-middle" id="seg-middle-${i}">
-        <div class="quarter-num" id="quarter-${i}">—</div>
-        <div class="down-row" id="down-row-${i}" style="display:none">
-          <div class="poss-dot" id="poss-dot-${i}"></div>
-          <span class="down-text" id="down-text-${i}"></span>
-        </div>
-      </div>
-      <div class="seg seg-home-score"><span class="score-num" id="home-score-${i}">0</span></div>
-      <div class="seg seg-home" id="seg-home-${i}"><span class="home-abbr" id="home-abbr-${i}">—</span></div>
-    </div>`;
-  document.getElementById('root').appendChild(wrap);
-}
-[0,1,2].forEach(buildBug);
-
-// ── Per-bug state ──
-const bugs=[0,1,2].map(i=>({idx:i,gameId:null,pollTimer:null,prev:{},done:false,visible:true}));
 
 async function apiFetch(url){ const r=await fetch(url); if(!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }
 
 async function loadSchedule(){
   bugs.forEach(b=>setSt(b.idx,'wait','Loading…'));
   try {
-    const data=await apiFetch(`${ESPN}/scoreboard`);
-    allGames=data.events||[];
+    const data = await apiFetch(`${ESPN}/scoreboard`);
+    allGames = data.events || [];
     if(!allGames.length){ bugs.forEach(b=>setSt(b.idx,'err','No games this week')); return; }
-    const live=allGames.filter(g=>g.competitions[0].status?.type?.state==='in');
-    const pool=live.length>=3?live:allGames;
+    const live = allGames.filter(g=>g.competitions[0].status?.type?.state==='in');
+    const pool = live.length>=3 ? live : allGames;
     [0,1,2].forEach(i=>{
-      const g=pool[i]||pool[0];
-      populateGameDropdown(document.getElementById(`game-dd-${i}`),allGames,g.id);
-      watch(bugs[i],g.id);
+      const g = pool[i] || pool[0];
+      populateSelect(i, allGames, g.id);
+      watch(bugs[i], g.id);
     });
   } catch(e){ bugs.forEach(b=>setSt(b.idx,'err',e.message)); }
 }
 
-function watch(bug,id){
-  bug.gameId=id||null; bug.prev={}; bug.done=false;
+function populateSelect(i, games, selectedId){
+  const sel = document.getElementById(`game-sel-${i}`);
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— None —</option>';
+  games.forEach(g=>{
+    const comp = g.competitions[0];
+    const away = comp.competitors.find(c=>c.homeAway==='away');
+    const home = comp.competitors.find(c=>c.homeAway==='home');
+    const state = comp.status?.type?.description || 'Scheduled';
+    const opt = document.createElement('option');
+    opt.value = g.id;
+    opt.textContent = `${away?.team?.abbreviation||'?'} @ ${home?.team?.abbreviation||'?'} — ${state}`;
+    sel.appendChild(opt);
+  });
+  sel.value = selectedId || cur || '';
+}
+
+function onGameChange(i){
+  watch(bugs[i], document.getElementById(`game-sel-${i}`).value);
+}
+function onRateChange(){ bugs.forEach(b=>{ if(b.gameId) watch(b, b.gameId); }); }
+function onDelayChange(){ delayMs = parseInt(document.getElementById('delaySel').value) || 0; }
+
+function watch(bug, id){
+  bug.gameId = id || null; bug.prev = {}; bug.done = false;
   clearInterval(bug.pollTimer);
   if(!id) return;
   poll(bug);
-  const rate=parseInt(getDropdownValue(document.getElementById('rate-dd')))||5000;
-  bug.pollTimer=setInterval(()=>poll(bug),rate);
+  const rate = parseInt(document.getElementById('rateSel').value) || 5000;
+  bug.pollTimer = setInterval(()=>poll(bug), rate);
 }
 
 async function poll(bug){
   if(!bug.gameId) return;
   try {
-    const data=await apiFetch(`${ESPN}/scoreboard`);
-    allGames=data.events||[];
-    const event=allGames.find(g=>g.id===bug.gameId);
+    const data = await apiFetch(`${ESPN}/scoreboard`);
+    allGames = data.events || [];
+    [0,1,2].forEach(i=>populateSelect(i, allGames, bugs[i].gameId));
+    const event = allGames.find(g=>g.id===bug.gameId);
     if(!event){ setSt(bug.idx,'err','Game not found'); return; }
     if(delayMs>0){
-      setTimeout(()=>{
-        renderBug(bug,event);
-        publishAll();
-        setSt(bug.idx,'ok',`Updated ${new Date().toLocaleTimeString()} (${delayMs/1000}s delay)`);
-      },delayMs);
+      setTimeout(()=>{ lastEvents[bug.idx]=event; publishAll(); updateStatus(bug,event); }, delayMs);
     } else {
-      renderBug(bug,event);
-      publishAll();
-      setSt(bug.idx,'ok',`Updated ${new Date().toLocaleTimeString()}`);
+      lastEvents[bug.idx]=event; publishAll(); updateStatus(bug,event);
     }
   } catch(e){ setSt(bug.idx,'err',e.message); }
 }
 
-// Build serializable bug state for publishing
+function updateStatus(bug, event){
+  const comp = event.competitions[0];
+  const status = comp.status || {};
+  const state = status.type?.state || 'pre';
+  const desc = status.type?.description || 'Scheduled';
+  if(state==='post'||status.type?.completed){
+    setSt(bug.idx,'ok','Final');
+    if(!bug.done){
+      bug.done=true; clearInterval(bug.pollTimer); bug.pollTimer=null;
+      setTimeout(()=>autoReplace(bug),10000);
+    }
+  } else if(state==='in'){
+    setSt(bug.idx,'ok',desc);
+  } else {
+    setSt(bug.idx,'wait',desc);
+  }
+}
+
 function serializeBug(bug, event){
-  if(!event) return {visible:bug.visible,empty:true};
-  const i=bug.idx;
+  if(!event) return { visible:bug.visible, empty:true };
   const comp=event.competitions[0];
   const away=comp.competitors.find(c=>c.homeAway==='away');
   const home=comp.competitors.find(c=>c.homeAway==='home');
-  const status=comp.status||{};
-  const sit=comp.situation||{};
-  const statusName=status.type?.name||'';
-  const state=status.type?.state||'pre';
+  const status=comp.status||{}, sit=comp.situation||{};
+  const statusName=status.type?.name||'', state=status.type?.state||'pre';
   const isFinal=state==='post'||status.type?.completed;
-  const isLive=state==='in';
-  const isHalftime=statusName==='STATUS_HALFTIME';
-  const awayScore=parseInt(away.score||'0',10);
-  const homeScore=parseInt(home.score||'0',10);
+  const isLive=state==='in', isHalftime=statusName==='STATUS_HALFTIME';
+  const awayScore=parseInt(away.score||'0',10), homeScore=parseInt(home.score||'0',10);
   const downTxt=sit.shortDownDistanceText||'';
   return {
-    visible: bug.visible,
-    awayAbbr: away.team.abbreviation,
-    homeAbbr: home.team.abbreviation,
+    visible:bug.visible,
+    awayAbbr:away.team.abbreviation, homeAbbr:home.team.abbreviation,
     awayScore, homeScore,
-    awayBg: teamBg(away.team), homeBg: teamBg(home.team),
-    awayText: teamText(away.team), homeText: teamText(home.team),
-    quarterLabel: isFinal?'F':(isLive||isHalftime)?quarterLabel(status.period||1,statusName)
+    awayBg:teamBg(away.team), homeBg:teamBg(home.team),
+    awayText:teamText(away.team), homeText:teamText(home.team),
+    quarterLabel:isFinal?'F':(isLive||isHalftime)?quarterLabel(status.period||1,statusName)
       :(event.date?new Date(event.date).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'PRE'),
-    isFinal: !!isFinal, isLive: !!(isLive||isHalftime),
-    downText: (downTxt&&!isHalftime)?downTxt.toUpperCase():'',
-    possColor: downTxt&&!isHalftime?(sit.possession===home.team.id?teamBg(home.team):teamBg(away.team)):'',
+    isFinal:!!isFinal, isLive:!!(isLive||isHalftime),
+    downText:(downTxt&&!isHalftime)?downTxt.toUpperCase():'',
+    possColor:(downTxt&&!isHalftime)?(sit.possession===home.team.id?teamBg(home.team):teamBg(away.team)):'',
   };
 }
-
-// Cache last known event per bug for serialization
-const lastEvents=[null,null,null];
 
 function publishAll(){
-  const state={
-    ts: Date.now(),
-    bugs: bugs.map((b,i)=>serializeBug(b,lastEvents[i]))
-  };
-  publish(state);
+  publish({ ts:Date.now(), bugs:bugs.map((b,i)=>serializeBug(b,lastEvents[i])) });
 }
 
-function renderBug(bug, event){
-  lastEvents[bug.idx]=event;
-  const i=bug.idx;
-  const comp=event.competitions[0];
-  const away=comp.competitors.find(c=>c.homeAway==='away');
-  const home=comp.competitors.find(c=>c.homeAway==='home');
-  const status=comp.status||{};
-  const sit=comp.situation||{};
-  const statusName=status.type?.name||'';
-  const state=status.type?.state||'pre';
-
-  const awayScore=parseInt(away.score||'0',10);
-  const homeScore=parseInt(home.score||'0',10);
-
-  document.getElementById(`seg-away-${i}`).style.background=teamBg(away.team);
-  document.getElementById(`seg-home-${i}`).style.background=teamBg(home.team);
-  document.getElementById(`away-abbr-${i}`).style.color=teamText(away.team);
-  document.getElementById(`home-abbr-${i}`).style.color=teamText(home.team);
-  document.getElementById(`away-abbr-${i}`).textContent=away.team.abbreviation;
-  document.getElementById(`home-abbr-${i}`).textContent=home.team.abbreviation;
-
-  const awayEl=document.getElementById(`away-score-${i}`);
-  const homeEl=document.getElementById(`home-score-${i}`);
-  if(bug.prev.away!==undefined&&awayScore>bug.prev.away) flashEl(awayEl);
-  if(bug.prev.home!==undefined&&homeScore>bug.prev.home) flashEl(homeEl);
-  awayEl.textContent=awayScore; homeEl.textContent=homeScore;
-  bug.prev={away:awayScore,home:homeScore};
-
-  const quarterEl=document.getElementById(`quarter-${i}`);
-  const downRow=document.getElementById(`down-row-${i}`);
-  const downTxtEl=document.getElementById(`down-text-${i}`);
-  const possDot=document.getElementById(`poss-dot-${i}`);
-  const bugEl=document.getElementById(`bug-${i}`);
-
-  const isFinal=state==='post'||status.type?.completed;
-  const isLive=state==='in';
-  const isHalftime=statusName==='STATUS_HALFTIME';
-
-  if(isFinal){
-    quarterEl.textContent='F'; downRow.style.display='none';
-    bugEl.classList.add('show','final');
-    if(!bug.done){ bug.done=true; clearInterval(bug.pollTimer); bug.pollTimer=null; setTimeout(()=>autoReplace(bug),10000); }
-  } else if(isLive||isHalftime){
-    quarterEl.textContent=quarterLabel(status.period||1,statusName);
-    bugEl.classList.add('show'); bugEl.classList.remove('final');
-    const downTxt=sit.shortDownDistanceText||'';
-    if(downTxt&&!isHalftime){
-      downTxtEl.textContent=downTxt.toUpperCase();
-      possDot.style.background=sit.possession===home.team.id?teamBg(home.team):teamBg(away.team);
-      downRow.style.display='';
-    } else { downRow.style.display='none'; }
-  } else {
-    const gameTime=event.date?new Date(event.date).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'PRE';
-    quarterEl.textContent=gameTime; downRow.style.display='none';
-    bugEl.classList.add('show'); bugEl.classList.remove('final');
-  }
+function toggleBug(i){
+  bugs[i].visible = !bugs[i].visible;
+  const hidden = !bugs[i].visible;
+  const btn = document.getElementById(`toggle-${i}`);
+  btn.textContent = hidden ? 'Show' : 'Hide';
+  btn.classList.toggle('hidden-state', hidden);
+  publishAll();
 }
 
 function autoReplace(bug){
@@ -437,32 +348,9 @@ function autoReplace(bug){
   const live=candidates.filter(g=>g.competitions[0].status?.type?.state==='in');
   const pre=candidates.filter(g=>g.competitions[0].status?.type?.state==='pre');
   const next=live[0]||pre[0]||candidates[0];
-  populateGameDropdown(document.getElementById(`game-dd-${bug.idx}`),allGames,next.id);
-  watch(bug,next.id);
+  populateSelect(bug.idx, allGames, next.id);
+  watch(bug, next.id);
 }
-
-function toggleBug(i){
-  const wrap=document.getElementById(`wrap-${i}`);
-  const btn=document.getElementById(`toggle-${i}`);
-  const hidden=wrap.style.display==='none';
-  wrap.style.display=hidden?'':'none';
-  bugs[i].visible=hidden;
-  btn.textContent=hidden?'Hide':'Show';
-  btn.classList.toggle('hidden-state',!hidden);
-  publishAll();
-}
-
-function flashEl(el){ el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
-function setSt(idx,type,msg){
-  document.getElementById(`sdot-${idx}`).className='sdot'+(type==='ok'?'':' '+type);
-  document.getElementById(`stext-${idx}`).textContent=msg;
-}
-
-initDropdown(document.getElementById('rate-dd'),()=>{ bugs.forEach(b=>{ if(b.gameId) watch(b,b.gameId); }); });
-initDropdown(document.getElementById('delay-dd'),val=>{ delayMs=parseInt(val)||0; });
-[0,1,2].forEach(i=>{
-  initDropdown(document.getElementById(`game-dd-${i}`),val=>{ watch(bugs[i],val); });
-});
 
 function schedule3amRefresh(){
   const now=new Date(), next=new Date(now);
