@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>NFL Scorebug — Display</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Barlow:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:transparent;width:100%;height:100%;overflow:hidden;}
+*{box-sizing:border-box;}
+
+.root{
+  position:fixed;bottom:40px;left:40px;
+  font-family:'Barlow',sans-serif;font-weight:700;
+  display:flex;flex-direction:column-reverse;gap:24px;
+}
+
+.bug{display:flex;align-items:stretch;height:50px;gap:10px;opacity:0;transform:translateY(8px);transition:opacity .4s ease,transform .4s ease;filter:drop-shadow(0 4px 14px rgba(0,0,0,0.7));border-radius:3px;}
+.bug.show{opacity:1;transform:translateY(0);}
+.bug.hidden{display:none;}
+.bug.final .seg-away,.bug.final .seg-home{opacity:0.45;}
+.bug.final .seg-away-score,.bug.final .seg-home-score,.bug.final .seg-middle{opacity:0.6;}
+
+.seg{display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0;border-radius:3px;}
+.seg-away{width:105px;height:50px;}
+.away-abbr{font-size:42px;font-weight:900;letter-spacing:.02em;text-transform:uppercase;text-shadow:0 1px 3px rgba(0,0,0,0.3);}
+.seg-away-score{width:51px;height:50px;background:#fff;}
+.seg-middle{width:90px;height:50px;background:#fff;border-left:1px solid rgba(0,0,0,0.08);border-right:1px solid rgba(0,0,0,0.08);flex-direction:column;gap:2px;}
+.seg-home-score{width:51px;height:50px;background:#fff;}
+.seg-home{width:105px;height:50px;}
+.home-abbr{font-size:42px;font-weight:900;letter-spacing:.02em;text-transform:uppercase;text-shadow:0 1px 3px rgba(0,0,0,0.3);}
+
+.score-num{font-size:46px;font-weight:900;color:#000;letter-spacing:-.01em;line-height:1;transition:color .25s;}
+.score-num.flash{animation:scoreFlash .7s ease forwards;}
+@keyframes scoreFlash{0%{transform:scale(1.5);color:#e05000;}60%{transform:scale(1.15);color:#e05000;}100%{transform:scale(1);color:#000;}}
+
+.quarter-num{font-size:24px;font-weight:900;color:#000;line-height:1;}
+.down-row{display:flex;align-items:center;justify-content:center;gap:5px;}
+.poss-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;transition:background .25s;}
+.down-text{font-size:12px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;line-height:1;}
+</style>
+</head>
+<body>
+
+<div class="root" id="root"></div>
+
+<script>
+const topic = new URLSearchParams(location.search).get('topic') || '';
+
+// Build bug DOM
+function buildBug(i){
+  const wrap = document.createElement('div');
+  wrap.id = `wrap-${i}`;
+  wrap.innerHTML = `
+    <div class="bug" id="bug-${i}">
+      <div class="seg seg-away" id="seg-away-${i}"><span class="away-abbr" id="away-abbr-${i}">—</span></div>
+      <div class="seg seg-away-score"><span class="score-num" id="away-score-${i}">0</span></div>
+      <div class="seg seg-middle">
+        <div class="quarter-num" id="quarter-${i}">—</div>
+        <div class="down-row" id="down-row-${i}" style="display:none">
+          <div class="poss-dot" id="poss-dot-${i}"></div>
+          <span class="down-text" id="down-text-${i}"></span>
+        </div>
+      </div>
+      <div class="seg seg-home-score"><span class="score-num" id="home-score-${i}">0</span></div>
+      <div class="seg seg-home" id="seg-home-${i}"><span class="home-abbr" id="home-abbr-${i}">—</span></div>
+    </div>`;
+  document.getElementById('root').appendChild(wrap);
+}
+[0,1,2].forEach(buildBug);
+
+const prevScores = [{},{}].concat([{}]);
+
+function flashEl(el){ el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
+
+function renderBug(i, b){
+  const bugEl = document.getElementById(`bug-${i}`);
+  const wrap  = document.getElementById(`wrap-${i}`);
+
+  if(!b || b.empty){
+    bugEl.classList.remove('show');
+    return;
+  }
+
+  wrap.style.display = b.visible ? '' : 'none';
+
+  document.getElementById(`seg-away-${i}`).style.background = b.awayBg;
+  document.getElementById(`seg-home-${i}`).style.background = b.homeBg;
+  document.getElementById(`away-abbr-${i}`).style.color = b.awayText;
+  document.getElementById(`home-abbr-${i}`).style.color = b.homeText;
+  document.getElementById(`away-abbr-${i}`).textContent = b.awayAbbr;
+  document.getElementById(`home-abbr-${i}`).textContent = b.homeAbbr;
+
+  const awayEl = document.getElementById(`away-score-${i}`);
+  const homeEl = document.getElementById(`home-score-${i}`);
+  const prev = prevScores[i];
+  if(prev.away !== undefined && b.awayScore > prev.away) flashEl(awayEl);
+  if(prev.home !== undefined && b.homeScore > prev.home) flashEl(homeEl);
+  awayEl.textContent = b.awayScore;
+  homeEl.textContent = b.homeScore;
+  prevScores[i] = { away: b.awayScore, home: b.homeScore };
+
+  document.getElementById(`quarter-${i}`).textContent = b.quarterLabel || '—';
+
+  const downRow = document.getElementById(`down-row-${i}`);
+  if(b.downText){
+    document.getElementById(`down-text-${i}`).textContent = b.downText;
+    document.getElementById(`poss-dot-${i}`).style.background = b.possColor || 'rgba(0,0,0,0.12)';
+    downRow.style.display = '';
+  } else {
+    downRow.style.display = 'none';
+  }
+
+  bugEl.classList.add('show');
+  if(b.isFinal) bugEl.classList.add('final');
+  else bugEl.classList.remove('final');
+}
+
+function handleState(state){
+  if(!state || !state.bugs) return;
+  state.bugs.forEach((b, i) => renderBug(i, b));
+}
+
+if(topic){
+  // Reconnect poll
+  fetch('https://ntfy.sh/' + topic + '/json?poll=1&since=10m')
+    .then(r => r.text()).then(text => {
+      const lines = text.trim().split('\n').filter(Boolean);
+      if(!lines.length) return;
+      try {
+        const msg = JSON.parse(lines[lines.length - 1]);
+        if(msg.message) handleState(JSON.parse(msg.message));
+      } catch(e){}
+    }).catch(()=>{});
+
+  // Live SSE with auto-reconnect
+  function connectSSE(){
+    const es = new EventSource('https://ntfy.sh/' + topic + '/sse');
+    es.addEventListener('message', e => {
+      try {
+        const msg = JSON.parse(e.data);
+        if(msg.message) handleState(JSON.parse(msg.message));
+      } catch(e){}
+    });
+    es.addEventListener('error', () => { es.close(); setTimeout(connectSSE, 3000); });
+  }
+  connectSSE();
+}
+</script>
+</body>
+</html>
