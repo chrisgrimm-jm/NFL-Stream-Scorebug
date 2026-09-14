@@ -4,146 +4,411 @@
 <meta charset="UTF-8">
 <title>NFL Scorebug — Display</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Barlow:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
 <style>
 html,body{margin:0;padding:0;background:transparent;width:100%;height:100%;overflow:hidden;}
 *{box-sizing:border-box;}
 
-.root{
-  position:fixed;bottom:40px;left:40px;
-  font-family:'Barlow',sans-serif;font-weight:700;
-  display:flex;flex-direction:column-reverse;gap:24px;
+.stage{position:fixed;bottom:40px;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:26px;font-family:'Barlow',sans-serif;font-weight:700;}
+
+/* ───────── Main bug: football field ───────── */
+.field-wrap{display:flex;flex-direction:column;align-items:center;gap:8px;opacity:0;transform:translateY(10px);transition:opacity .4s ease,transform .4s ease;}
+.field-wrap.show{opacity:1;transform:translateY(0);}
+
+.field-hud{position:relative;z-index:2;background:#0d0d0d;color:#fff;border-radius:5px;padding:5px 16px;display:flex;align-items:center;gap:10px;white-space:nowrap;box-shadow:0 3px 8px rgba(0,0,0,.5);}
+.field-quarter{font-size:16px;font-weight:900;}
+.field-down{font-size:13px;font-weight:800;color:#ffd60a;text-transform:uppercase;}
+
+.field-bar{display:flex;align-items:stretch;height:96px;width:760px;border-radius:6px;filter:drop-shadow(0 4px 14px rgba(0,0,0,.7));position:relative;}
+
+.endzone{width:74px;flex-shrink:0;display:flex;align-items:center;justify-content:center;position:relative;transition:box-shadow .25s;}
+.endzone.away{border-radius:6px 0 0 6px;}
+.endzone.home{border-radius:0 6px 6px 0;}
+.endzone.offense{box-shadow:inset 0 0 0 3px rgba(255,214,10,.9);}
+.ez-logo-badge{width:50px;height:50px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.35);}
+.ez-logo{width:36px;height:36px;object-fit:contain;}
+.ez-score{position:absolute;top:-15px;left:50%;transform:translateX(-50%);background:#fff;color:#000;font-size:24px;font-weight:900;border-radius:13px;padding:1px 11px;box-shadow:0 2px 6px rgba(0,0,0,.4);transition:color .25s;}
+.ez-score.flash{animation:scoreFlash .7s ease forwards;}
+@keyframes scoreFlash{0%{transform:translateX(-50%) scale(1.4);color:#e05000;}60%{transform:translateX(-50%) scale(1.1);color:#e05000;}100%{transform:translateX(-50%) scale(1);color:#000;}}
+
+.turf{flex:1;position:relative;overflow:hidden;
+  background:repeating-linear-gradient(90deg,#2f7d34 0,#2f7d34 10%,#296e2c 10%,#296e2c 20%);}
+.yard-tick{position:absolute;top:6px;bottom:6px;width:2px;background:rgba(255,255,255,.55);z-index:0;}
+.yard-num{position:absolute;bottom:5px;transform:translateX(-50%);font-size:10px;font-weight:900;color:rgba(255,255,255,.6);z-index:0;}
+.turf-logo{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);height:78px;width:78px;object-fit:contain;opacity:.92;pointer-events:none;z-index:1;}
+.first-down-line{position:absolute;top:0;bottom:0;width:3px;background:#ffd60a;opacity:0;transition:left .5s ease,opacity .2s;box-shadow:0 0 4px rgba(255,214,10,.8);z-index:2;}
+.first-down-line.on{opacity:.95;}
+.ball{position:absolute;top:50%;transform:translate(-50%,-50%);font-size:18px;opacity:0;transition:left .5s ease,opacity .2s;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6));z-index:3;}
+.ball.on{opacity:1;}
+
+.field-stack{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;}
+.field-bar{position:relative;z-index:1;}
+.play-bar{
+  position:absolute;bottom:100%;left:50%;
+  transform:translateX(-50%) translateY(100%);
+  opacity:0;z-index:0;
+  transition:transform .45s cubic-bezier(.2,.8,.2,1),opacity .3s ease;
+  background:#fff;border-radius:4px;padding:6px 16px;max-width:700px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:700;color:#000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  box-shadow:0 6px 14px rgba(0,0,0,.5);
 }
+.play-bar.show{transform:translateX(-50%) translateY(-8px);opacity:1;}
 
-.bug{display:flex;align-items:stretch;height:50px;gap:10px;opacity:0;transform:translateY(8px);transition:opacity .4s ease,transform .4s ease;filter:drop-shadow(0 4px 14px rgba(0,0,0,0.7));border-radius:3px;}
-.bug.show{opacity:1;transform:translateY(0);}
-.bug.hidden{display:none;}
-.bug.final .seg-away,.bug.final .seg-home{opacity:0.45;}
-.bug.final .seg-away-score,.bug.final .seg-home-score,.bug.final .seg-middle{opacity:0.6;}
-
-.seg{display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0;border-radius:3px;}
-.seg-away{width:105px;height:50px;}
-.away-abbr{font-size:42px;font-weight:900;letter-spacing:.02em;text-transform:uppercase;text-shadow:0 1px 3px rgba(0,0,0,0.3);}
-.seg-away-score{width:51px;height:50px;background:#fff;}
-.seg-middle{width:90px;height:50px;background:#fff;border-left:1px solid rgba(0,0,0,0.08);border-right:1px solid rgba(0,0,0,0.08);flex-direction:column;gap:2px;}
-.seg-home-score{width:51px;height:50px;background:#fff;}
-.seg-home{width:105px;height:50px;}
-.home-abbr{font-size:42px;font-weight:900;letter-spacing:.02em;text-transform:uppercase;text-shadow:0 1px 3px rgba(0,0,0,0.3);}
-
-.score-num{font-size:46px;font-weight:900;color:#000;letter-spacing:-.01em;line-height:1;transition:color .25s;}
-.score-num.flash{animation:scoreFlash .7s ease forwards;}
-@keyframes scoreFlash{0%{transform:scale(1.5);color:#e05000;}60%{transform:scale(1.15);color:#e05000;}100%{transform:scale(1);color:#000;}}
-
-.quarter-num{font-size:24px;font-weight:900;color:#000;line-height:1;}
-.down-row{display:flex;align-items:center;justify-content:center;gap:5px;}
-.poss-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;transition:background .25s;}
-.down-text{font-size:12px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;line-height:1;}
+/* ───────── Secondary bugs: compact ───────── */
+.mini-wrap{transform:scale(.82);opacity:0;transition:opacity .4s ease;}
+.mini-wrap.show{opacity:1;}
+.mini-bug{display:flex;align-items:stretch;height:50px;gap:8px;filter:drop-shadow(0 4px 14px rgba(0,0,0,.7));border-radius:3px;}
+.mini-bug.final .mseg-away,.mini-bug.final .mseg-home{opacity:.45;}
+.mini-bug.final .mseg-away-score,.mini-bug.final .mseg-home-score,.mini-bug.final .mseg-middle{opacity:.6;}
+.mseg{display:flex;align-items:center;justify-content:center;flex-shrink:0;border-radius:3px;position:relative;}
+.mseg-away,.mseg-home{width:88px;height:50px;}
+.mabbr{font-size:32px;font-weight:900;letter-spacing:.02em;text-transform:uppercase;text-shadow:0 1px 3px rgba(0,0,0,.3);}
+.mseg-away-score,.mseg-home-score{width:44px;height:50px;background:#fff;}
+.mscore{font-size:36px;font-weight:900;color:#000;line-height:1;transition:color .25s;}
+.mscore.flash{animation:scoreFlash .7s ease forwards;}
+.mseg-middle{width:74px;height:50px;background:#fff;flex-direction:column;gap:2px;border-left:1px solid rgba(0,0,0,.08);border-right:1px solid rgba(0,0,0,.08);}
+.mquarter{font-size:19px;font-weight:900;color:#000;line-height:1;}
+.mdown{font-size:10px;font-weight:900;color:#000;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;line-height:1;}
+.mposs{position:absolute;left:50%;bottom:3px;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid #fff;opacity:0;transition:opacity .2s;}
+.mposs.on{opacity:1;}
 </style>
 </head>
 <body>
 
-<div class="root" id="root"></div>
-
-<script>
-const topic = new URLSearchParams(location.search).get('topic') || '';
-
-// Build bug DOM
-function buildBug(i){
-  const wrap = document.createElement('div');
-  wrap.id = `wrap-${i}`;
-  wrap.innerHTML = `
-    <div class="bug" id="bug-${i}">
-      <div class="seg seg-away" id="seg-away-${i}"><span class="away-abbr" id="away-abbr-${i}">—</span></div>
-      <div class="seg seg-away-score"><span class="score-num" id="away-score-${i}">0</span></div>
-      <div class="seg seg-middle">
-        <div class="quarter-num" id="quarter-${i}">—</div>
-        <div class="down-row" id="down-row-${i}" style="display:none">
-          <div class="poss-dot" id="poss-dot-${i}"></div>
-          <span class="down-text" id="down-text-${i}"></span>
+<div class="stage" id="stage">
+  <div class="mini-wrap" id="mini-wrap-1"></div>
+  <div class="field-wrap" id="field-wrap">
+    <div class="field-stack">
+      <div class="play-bar" id="play-bar"></div>
+      <div class="field-hud">
+        <span class="field-quarter" id="field-quarter">—</span>
+        <span class="field-down" id="field-down"></span>
+      </div>
+      <div class="field-bar" id="field-bar">
+        <div class="endzone away" id="ez-away">
+          <div class="ez-score" id="ez-away-score">0</div>
+          <div class="ez-logo-badge"><img class="ez-logo" id="ez-away-logo" alt=""></div>
+        </div>
+        <div class="turf" id="turf">
+          <img class="turf-logo" src="assets/jmf-logo.png" alt="">
+          <div class="first-down-line" id="fd-line"></div>
+          <div class="ball" id="ball">🏈</div>
+        </div>
+        <div class="endzone home" id="ez-home">
+          <div class="ez-score" id="ez-home-score">0</div>
+          <div class="ez-logo-badge"><img class="ez-logo" id="ez-home-logo" alt=""></div>
         </div>
       </div>
-      <div class="seg seg-home-score"><span class="score-num" id="home-score-${i}">0</span></div>
-      <div class="seg seg-home" id="seg-home-${i}"><span class="home-abbr" id="home-abbr-${i}">—</span></div>
-    </div>`;
-  document.getElementById('root').appendChild(wrap);
+    </div>
+  </div>
+  <div class="mini-wrap" id="mini-wrap-2"></div>
+</div>
+
+<script>
+const ESPN = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl';
+const topic = new URLSearchParams(location.search).get('topic') || '';
+
+let delayMs = 30000;
+let hiddenState = [false, false, false];
+let possHidden = [false, false, false];
+let playHidden = false;
+let allGames = [];
+
+function teamBg(t){ return '#' + (t.color || '1e2530'); }
+function teamText(t){
+  const hex = t.color || '1e2530';
+  const r=parseInt(hex.slice(0,2),16), g=parseInt(hex.slice(2,4),16), b=parseInt(hex.slice(4,6),16);
+  return (0.299*r+0.587*g+0.114*b) > 140 ? '#000' : '#fff';
 }
-[0,1,2].forEach(buildBug);
-
-const prevScores = [{},{}].concat([{}]);
-
+function quarterLabel(period, statusName){
+  if(statusName==='STATUS_HALFTIME') return 'HT';
+  if(period<=4) return 'Q'+period;
+  if(period===5) return 'OT';
+  return (period-4)+'OT';
+}
+function logoUrl(t){ return `https://a.espncdn.com/i/teamlogos/nfl/500/${t.abbreviation.toLowerCase()}.png`; }
 function flashEl(el){ el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
 
-function renderBug(i, b){
-  const bugEl = document.getElementById(`bug-${i}`);
-  const wrap  = document.getElementById(`wrap-${i}`);
-
-  if(!b || b.empty){
-    bugEl.classList.remove('show');
-    return;
+// ── Static turf markings (yard ticks + mirrored numbers), built once ──
+(function buildTurf(){
+  const turf = document.getElementById('turf');
+  for(let pct=10; pct<=90; pct+=10){
+    const tick = document.createElement('div');
+    tick.className = 'yard-tick';
+    tick.style.left = pct + '%';
+    turf.appendChild(tick);
+    const num = document.createElement('div');
+    num.className = 'yard-num';
+    num.style.left = pct + '%';
+    num.textContent = pct<=50 ? pct : 100-pct;
+    turf.appendChild(num);
   }
+})();
 
-  wrap.style.display = b.visible ? '' : 'none';
+const mainBug = { gameId:null, prev:{}, done:false, firstRender:true, lastPlayText:'' };
+let playPopTimer = null;
+function triggerPlayPopup(text){
+  const bar = document.getElementById('play-bar');
+  bar.textContent = text;
+  bar.classList.add('show');
+  clearTimeout(playPopTimer);
+  playPopTimer = setTimeout(()=>bar.classList.remove('show'), 8000);
+}
+function hidePlayPopup(){
+  clearTimeout(playPopTimer);
+  document.getElementById('play-bar').classList.remove('show');
+}
 
-  document.getElementById(`seg-away-${i}`).style.background = b.awayBg;
-  document.getElementById(`seg-home-${i}`).style.background = b.homeBg;
-  document.getElementById(`away-abbr-${i}`).style.color = b.awayText;
-  document.getElementById(`home-abbr-${i}`).style.color = b.homeText;
-  document.getElementById(`away-abbr-${i}`).textContent = b.awayAbbr;
-  document.getElementById(`home-abbr-${i}`).textContent = b.homeAbbr;
+function renderMain(event){
+  const comp = event.competitions[0];
+  const away = comp.competitors.find(c=>c.homeAway==='away');
+  const home = comp.competitors.find(c=>c.homeAway==='home');
+  const status = comp.status || {};
+  const sit = comp.situation || {};
+  const statusName = status.type?.name || '';
+  const state = status.type?.state || 'pre';
+  const isFinal = state==='post' || status.type?.completed;
+  const isLive = state==='in';
+  const isHalftime = statusName==='STATUS_HALFTIME';
 
-  const awayEl = document.getElementById(`away-score-${i}`);
-  const homeEl = document.getElementById(`home-score-${i}`);
-  const prev = prevScores[i];
-  if(prev.away !== undefined && b.awayScore > prev.away) flashEl(awayEl);
-  if(prev.home !== undefined && b.homeScore > prev.home) flashEl(homeEl);
-  awayEl.textContent = b.awayScore;
-  homeEl.textContent = b.homeScore;
-  prevScores[i] = { away: b.awayScore, home: b.homeScore };
+  document.getElementById('ez-away').style.background = teamBg(away.team);
+  document.getElementById('ez-home').style.background = teamBg(home.team);
+  document.getElementById('ez-away-logo').src = logoUrl(away.team);
+  document.getElementById('ez-home-logo').src = logoUrl(home.team);
 
-  document.getElementById(`quarter-${i}`).textContent = b.quarterLabel || '—';
+  const awayScore = parseInt(away.score||'0',10), homeScore = parseInt(home.score||'0',10);
+  const awayEl = document.getElementById('ez-away-score');
+  const homeEl = document.getElementById('ez-home-score');
+  if(mainBug.prev.away !== undefined && awayScore > mainBug.prev.away) flashEl(awayEl);
+  if(mainBug.prev.home !== undefined && homeScore > mainBug.prev.home) flashEl(homeEl);
+  awayEl.textContent = awayScore;
+  homeEl.textContent = homeScore;
+  mainBug.prev = { away: awayScore, home: homeScore };
 
-  const downRow = document.getElementById(`down-row-${i}`);
-  if(b.downText){
-    document.getElementById(`down-text-${i}`).textContent = b.downText;
-    document.getElementById(`poss-dot-${i}`).style.background = b.possColor || 'rgba(0,0,0,0.12)';
-    downRow.style.display = '';
+  document.getElementById('field-quarter').textContent = isFinal ? 'FINAL'
+    : (isLive||isHalftime) ? quarterLabel(status.period||1, statusName)
+    : (event.date ? new Date(event.date).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}) : 'PRE');
+
+  const downEl = document.getElementById('field-down');
+  const ball = document.getElementById('ball');
+  const fdLine = document.getElementById('fd-line');
+  const ezAway = document.getElementById('ez-away');
+  const ezHome = document.getElementById('ez-home');
+
+  const hasSit = !isFinal && !isHalftime && sit.yardLine != null && sit.down;
+  if(hasSit && !possHidden[0]){
+    downEl.textContent = (sit.shortDownDistanceText||'').toUpperCase();
+    const possIsAway = sit.possession === away.team.id;
+    const ballYards = sit.yardLine;
+    const fdYards = Math.min(sit.yardLine + (sit.distance||0), 100);
+    const toPct = y => possIsAway ? y : 100 - y;
+    ball.style.left = toPct(ballYards) + '%';
+    fdLine.style.left = toPct(fdYards) + '%';
+    ball.classList.add('on');
+    fdLine.classList.add('on');
+    ezAway.classList.toggle('offense', possIsAway);
+    ezHome.classList.toggle('offense', !possIsAway);
   } else {
-    downRow.style.display = 'none';
+    downEl.textContent = '';
+    ball.classList.remove('on');
+    fdLine.classList.remove('on');
+    ezAway.classList.remove('offense');
+    ezHome.classList.remove('offense');
   }
 
-  bugEl.classList.add('show');
-  if(b.isFinal) bugEl.classList.add('final');
-  else bugEl.classList.remove('final');
+  const playTxt = (!isFinal && sit.lastPlay?.text) ? sit.lastPlay.text.trim() : '';
+  if(playTxt && !playHidden && playTxt !== mainBug.lastPlayText){
+    mainBug.lastPlayText = playTxt;
+    triggerPlayPopup(playTxt);
+  } else if(!playTxt || playHidden){
+    mainBug.lastPlayText = '';
+  }
+
+  document.getElementById('field-wrap').classList.add('show');
+
+  if(isFinal && !mainBug.done){
+    mainBug.done = true;
+    setTimeout(()=>autoReplaceMain(), 10000);
+  }
 }
 
-function handleState(state){
-  if(!state || !state.bugs) return;
-  state.bugs.forEach((b, i) => renderBug(i, b));
+// ── Secondary (compact) bugs ──
+function buildMini(i){
+  const wrap = document.getElementById(`mini-wrap-${i}`);
+  wrap.innerHTML = `
+    <div class="mini-bug" id="mbug-${i}">
+      <div class="mseg mseg-away" id="mseg-away-${i}"><span class="mabbr" id="maway-abbr-${i}">—</span></div>
+      <div class="mseg mseg-away-score"><span class="mscore" id="maway-score-${i}">0</span></div>
+      <div class="mseg mseg-middle">
+        <div class="mquarter" id="mquarter-${i}">—</div>
+        <div class="mdown" id="mdown-${i}"></div>
+      </div>
+      <div class="mseg mseg-home-score"><span class="mscore" id="mhome-score-${i}">0</span></div>
+      <div class="mseg mseg-home" id="mseg-home-${i}">
+        <span class="mabbr" id="mhome-abbr-${i}">—</span>
+        <div class="mposs" id="mposs-home-${i}"></div>
+      </div>
+    </div>`;
 }
+[1,2].forEach(buildMini);
+
+const miniBugs = [1,2].map(i => ({ idx:i, gameId:null, prev:{}, done:false, firstRender:true }));
+
+function renderMini(bug, event){
+  const i = bug.idx;
+  const comp = event.competitions[0];
+  const away = comp.competitors.find(c=>c.homeAway==='away');
+  const home = comp.competitors.find(c=>c.homeAway==='home');
+  const status = comp.status || {};
+  const sit = comp.situation || {};
+  const statusName = status.type?.name || '';
+  const state = status.type?.state || 'pre';
+  const isFinal = state==='post' || status.type?.completed;
+  const isLive = state==='in';
+  const isHalftime = statusName==='STATUS_HALFTIME';
+
+  document.getElementById(`mseg-away-${i}`).style.background = teamBg(away.team);
+  document.getElementById(`mseg-home-${i}`).style.background = teamBg(home.team);
+  document.getElementById(`maway-abbr-${i}`).style.color = teamText(away.team);
+  document.getElementById(`mhome-abbr-${i}`).style.color = teamText(home.team);
+  document.getElementById(`maway-abbr-${i}`).textContent = away.team.abbreviation;
+  document.getElementById(`mhome-abbr-${i}`).textContent = home.team.abbreviation;
+
+  const awayScore = parseInt(away.score||'0',10), homeScore = parseInt(home.score||'0',10);
+  const awayEl = document.getElementById(`maway-score-${i}`);
+  const homeEl = document.getElementById(`mhome-score-${i}`);
+  if(bug.prev.away !== undefined && awayScore > bug.prev.away) flashEl(awayEl);
+  if(bug.prev.home !== undefined && homeScore > bug.prev.home) flashEl(homeEl);
+  awayEl.textContent = awayScore;
+  homeEl.textContent = homeScore;
+  bug.prev = { away: awayScore, home: homeScore };
+
+  document.getElementById(`mquarter-${i}`).textContent = isFinal ? 'F'
+    : (isLive||isHalftime) ? quarterLabel(status.period||1, statusName)
+    : (event.date ? new Date(event.date).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}) : 'PRE');
+
+  const downTxt = (!isFinal && !isHalftime) ? (sit.shortDownDistanceText||'') : '';
+  document.getElementById(`mdown-${i}`).textContent = downTxt.toUpperCase();
+
+  const possHome = document.getElementById(`mposs-home-${i}`);
+  const showPoss = downTxt && !possHidden[i];
+  possHome.classList.toggle('on', !!(showPoss && sit.possession === home.team.id));
+  // (away side has no marker element to keep the compact bug simple; the home
+  // triangle alone plus down text is enough at this size — flip note below.)
+
+  const bugEl = document.getElementById(`mbug-${i}`);
+  bugEl.classList.toggle('final', !!isFinal);
+
+  if(isFinal && !bug.done){
+    bug.done = true;
+    setTimeout(()=>autoReplaceMini(bug), 10000);
+  }
+}
+
+async function apiFetch(url){ const r=await fetch(url); if(!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }
+
+function watchMain(id){
+  mainBug.gameId = id || null; mainBug.prev = {}; mainBug.done = false; mainBug.firstRender = true;
+  mainBug.lastPlayText = '';
+  hidePlayPopup();
+  if(!id) document.getElementById('field-wrap').classList.remove('show');
+}
+function watchMini(bug, id){
+  bug.gameId = id || null; bug.prev = {}; bug.done = false; bug.firstRender = true;
+  const wrap = document.getElementById(`mini-wrap-${bug.idx}`);
+  if(!id) wrap.classList.remove('show');
+}
+
+async function pollAll(){
+  try {
+    const data = await apiFetch(`${ESPN}/scoreboard`);
+    allGames = data.events || [];
+
+    if(mainBug.gameId){
+      const event = allGames.find(g=>g.id===mainBug.gameId);
+      if(event){
+        const useDelay = delayMs>0 && !mainBug.firstRender;
+        mainBug.firstRender = false;
+        if(useDelay) setTimeout(()=>renderMain(event), delayMs);
+        else renderMain(event);
+      }
+    }
+
+    miniBugs.forEach(bug => {
+      if(!bug.gameId) return;
+      const event = allGames.find(g=>g.id===bug.gameId);
+      if(!event) return;
+      const useDelay = delayMs>0 && !bug.firstRender;
+      bug.firstRender = false;
+      if(useDelay) setTimeout(()=>{ renderMini(bug,event); document.getElementById(`mini-wrap-${bug.idx}`).classList.add('show'); }, delayMs);
+      else { renderMini(bug,event); document.getElementById(`mini-wrap-${bug.idx}`).classList.add('show'); }
+    });
+  } catch(e){ console.error(e); }
+}
+pollAll();
+setInterval(pollAll, 5000);
+
+function autoReplaceMain(){
+  if(!allGames.length) return;
+  const watchedIds = new Set([mainBug.gameId, ...miniBugs.map(b=>b.gameId)].filter(Boolean));
+  const candidates = allGames.filter(g=>!watchedIds.has(g.id));
+  if(!candidates.length) return;
+  const live = candidates.filter(g=>g.competitions[0].status?.type?.state==='in');
+  const pre = candidates.filter(g=>g.competitions[0].status?.type?.state==='pre');
+  watchMain((live[0]||pre[0]||candidates[0]).id);
+}
+function autoReplaceMini(bug){
+  if(!allGames.length) return;
+  const watchedIds = new Set([mainBug.gameId, ...miniBugs.map(b=>b.gameId)].filter(Boolean));
+  const candidates = allGames.filter(g=>!watchedIds.has(g.id));
+  if(!candidates.length) return;
+  const live = candidates.filter(g=>g.competitions[0].status?.type?.state==='in');
+  const pre = candidates.filter(g=>g.competitions[0].status?.type?.state==='pre');
+  watchMini(bug, (live[0]||pre[0]||candidates[0]).id);
+}
+
+function applyConfig(cfg){
+  if(typeof cfg.delay === 'number') delayMs = cfg.delay;
+  if(Array.isArray(cfg.games)){
+    if((cfg.games[0]||null) !== mainBug.gameId) watchMain(cfg.games[0]||null);
+    miniBugs.forEach((bug,idx)=>{
+      const id = cfg.games[idx+1];
+      if((id||null) !== bug.gameId) watchMini(bug, id||null);
+    });
+  }
+  if(Array.isArray(cfg.hidden)){
+    hiddenState = cfg.hidden;
+    if(document.getElementById('field-wrap')) document.getElementById('field-wrap').style.display = hiddenState[0] ? 'none' : '';
+    miniBugs.forEach((bug,idx)=>{
+      const wrap = document.getElementById(`mini-wrap-${bug.idx}`);
+      if(wrap) wrap.style.display = hiddenState[idx+1] ? 'none' : '';
+    });
+  }
+  if(Array.isArray(cfg.possHidden)) possHidden = cfg.possHidden;
+  if(typeof cfg.playHidden === 'boolean'){
+    playHidden = cfg.playHidden;
+    if(playHidden) hidePlayPopup();
+  }
+}
+
+// ── Firebase config transport ──
+firebase.initializeApp({
+  apiKey: 'AIzaSyBG2PS2muH4i27HefuLeBnZWW-TZ5dkMCw',
+  databaseURL: 'https://pinpoint-abf21-default-rtdb.firebaseio.com'
+});
+const _db = firebase.database();
+const fbKey = t => t.trim().replace(/[.#$\[\]\/\s]+/g, '-');
+const asArr = x => Array.isArray(x) ? x : Object.values(x || {});
 
 if(topic){
-  // Reconnect poll
-  fetch('https://ntfy.sh/' + topic + '/json?poll=1&since=10m')
-    .then(r => r.text()).then(text => {
-      const lines = text.trim().split('\n').filter(Boolean);
-      if(!lines.length) return;
-      try {
-        const msg = JSON.parse(lines[lines.length - 1]);
-        if(msg.message) handleState(JSON.parse(msg.message));
-      } catch(e){}
-    }).catch(()=>{});
-
-  // Live SSE with auto-reconnect
-  function connectSSE(){
-    const es = new EventSource('https://ntfy.sh/' + topic + '/sse');
-    es.addEventListener('message', e => {
-      try {
-        const msg = JSON.parse(e.data);
-        if(msg.message) handleState(JSON.parse(msg.message));
-      } catch(e){}
-    });
-    es.addEventListener('error', () => { es.close(); setTimeout(connectSSE, 3000); });
-  }
-  connectSSE();
+  _db.ref(`nfl-scorebug/${fbKey(topic)}/state`).on('value', snap => {
+    const cfg = snap.val();
+    if(!cfg) return;
+    ['games','hidden','possHidden'].forEach(k=>{ if(cfg[k]) cfg[k] = asArr(cfg[k]); });
+    applyConfig(cfg);
+  });
 }
 </script>
 </body>

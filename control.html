@@ -2,98 +2,201 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>NFL Scorebug Control</title>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
 <style>
-*{box-sizing:border-box;margin:0;padding:0;}
-body{background:#0d0d0d;color:#fff;font-family:'Barlow',sans-serif;min-height:100vh;padding:32px 0 60px;}
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Barlow', sans-serif; }
+html, body {
+  background: #0a0d14;
+  color: #c8d0da;
+  font-family: 'Barlow', sans-serif;
+  font-size: 14px;
+  min-height: 100vh;
+}
+.panel {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 28px 20px 60px;
+}
+h1 {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.35);
+  margin-bottom: 22px;
+}
+.section {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.section-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.28);
+  margin-bottom: 13px;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.row:last-child { margin-bottom: 0; }
+label {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.35);
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  min-width: 56px;
+  flex-shrink: 0;
+}
+select, input[type="text"] {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 4px;
+  color: #e0e6ee;
+  font-size: 13px;
+  font-family: 'Barlow', sans-serif;
+  padding: 7px 10px;
+  flex: 1;
+  outline: none;
+  transition: border-color .15s;
+  cursor: pointer;
+}
+select:focus, input:focus { border-color: rgba(255,255,255,0.25); }
+option { background: #0e1420; }
 
-.page{max-width:500px;margin:0 auto;padding:0 20px;}
+.bug-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.bug-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.28);
+}
+.bug-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sdot { width: 7px; height: 7px; border-radius: 50%; background: #374151; flex-shrink: 0; }
+.sdot.live { background: #22c55e; }
+.sdot.final { background: #ef4444; }
+.sdot.pre { background: #f59e0b; }
+.stext { font-size: 11px; color: rgba(255,255,255,0.28); }
 
-.page-header{display:flex;align-items:center;gap:10px;margin-bottom:28px;}
-.page-header h1{font-size:13px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,0.55);}
+.toggle-btn {
+  font-size: 10px; font-weight: 700; letter-spacing: .07em;
+  text-transform: uppercase; padding: 4px 10px;
+  border-radius: 3px; border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.38);
+  cursor: pointer; transition: all .15s;
+}
+.toggle-btn:hover { background: rgba(255,255,255,0.09); color: #fff; }
+.toggle-btn.hidden-state { background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.28); color: rgba(239,68,68,0.65); }
 
-.card{background:#161616;border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:20px;margin-bottom:14px;}
-.card-label{font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:14px;}
+.obs-url-box {
+  background: rgba(0,0,0,0.25);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 4px;
+  padding: 9px 12px;
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.obs-url-text {
+  flex: 1;
+  font-size: 11px;
+  font-family: monospace;
+  color: rgba(255,255,255,0.3);
+  word-break: break-all;
+}
+.copy-btn {
+  flex-shrink: 0;
+  font-size: 10px; font-weight: 700; letter-spacing: .07em;
+  text-transform: uppercase; padding: 5px 11px;
+  border-radius: 3px; border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.38);
+  cursor: pointer; transition: all .15s;
+}
+.copy-btn:hover { background: rgba(255,255,255,0.09); color: #fff; }
+.copy-btn.copied { background: rgba(34,197,94,0.12); border-color: rgba(34,197,94,0.28); color: #22c55e; }
 
-.field-row{display:flex;flex-direction:column;gap:5px;margin-bottom:12px;}
-.field-row:last-child{margin-bottom:0;}
-.field-label{font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,0.3);}
-.field-input{width:100%;background:#0d0d0d;border:1px solid rgba(255,255,255,0.1);border-radius:5px;padding:9px 12px;color:#fff;font-family:'Barlow',sans-serif;font-size:14px;outline:none;transition:border-color .15s;}
-.field-input:focus{border-color:rgba(255,255,255,0.3);}
-.url-row{display:flex;gap:8px;align-items:stretch;}
-.url-box{flex:1;background:#0d0d0d;border:1px solid rgba(255,255,255,0.08);border-radius:5px;padding:9px 12px;font-size:11px;color:rgba(255,255,255,0.35);font-family:'Barlow',sans-serif;word-break:break-all;line-height:1.4;}
-.copy-btn{font-family:'Barlow',sans-serif;font-weight:700;font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.5);border:1px solid rgba(255,255,255,0.12);border-radius:5px;padding:0 16px;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s;flex-shrink:0;}
-.copy-btn:hover{background:rgba(255,255,255,0.13);color:#fff;}
+.hint {
+  font-size: 11px;
+  color: rgba(255,255,255,0.22);
+  line-height: 1.5;
+  margin-top: 8px;
+  margin-bottom: 2px;
+}
+select option:disabled { color: rgba(255,255,255,0.2); }
 
-.settings-row{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
-.settings-row:last-child{margin-bottom:0;}
-.settings-label{font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,0.3);min-width:60px;}
-.settings-select{flex:1;background:#0d0d0d;border:1px solid rgba(255,255,255,0.1);border-radius:5px;padding:8px 10px;color:#fff;font-family:'Barlow',sans-serif;font-size:13px;outline:none;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23666'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;transition:border-color .15s;}
-.settings-select:focus{border-color:rgba(255,255,255,0.3);}
-.settings-select option{background:#161616;}
-
-.bug-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
-.bug-card-left{display:flex;align-items:center;gap:10px;}
-.bug-label{font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,0.3);}
-.status-row{display:flex;align-items:center;gap:6px;}
-.sdot{width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0;}
-.sdot.wait{background:#f59e0b;}.sdot.err{background:#ef4444;}
-.status-text{font-size:11px;color:rgba(255,255,255,0.35);}
-.hide-btn{font-family:'Barlow',sans-serif;font-weight:700;font-size:10px;letter-spacing:.1em;text-transform:uppercase;background:transparent;color:rgba(255,255,255,0.3);border:1px solid rgba(255,255,255,0.12);border-radius:4px;padding:3px 10px;cursor:pointer;transition:all .15s;}
-.hide-btn:hover{color:#fff;border-color:rgba(255,255,255,0.3);}
-.hide-btn.hidden-state{background:rgba(239,68,68,0.12);border-color:rgba(239,68,68,0.25);color:rgba(239,68,68,0.6);}
-.game-select{width:100%;background:#0d0d0d;border:1px solid rgba(255,255,255,0.1);border-radius:5px;padding:9px 10px;color:#fff;font-family:'Barlow',sans-serif;font-size:13px;outline:none;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23666'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;transition:border-color .15s;}
-.game-select:focus{border-color:rgba(255,255,255,0.3);}
-.game-select option{background:#161616;}
-
-#pushStatus{text-align:center;font-size:11px;color:rgba(255,255,255,0.2);margin-top:20px;letter-spacing:.02em;}
-#pushStatus.ok{color:#22c55e;}
-#pushStatus.err{color:#ef4444;}
+.section-header {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.collapse-btn {
+  font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  padding: 3px 9px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.3);
+  cursor: pointer; transition: all .15s;
+}
+.collapse-btn:hover { background: rgba(255,255,255,0.09); color: #fff; }
+.collapsible { overflow: hidden; transition: max-height .25s ease, opacity .25s ease; max-height: 400px; opacity: 1; }
+.collapsible.collapsed { max-height: 0; opacity: 0; }
+.push-status {
+  font-size: 11px;
+  color: rgba(255,255,255,0.22);
+  text-align: center;
+  margin-top: 16px;
+  transition: color .2s;
+}
+.push-status.ok { color: rgba(34,197,94,0.55); }
+.push-status.err { color: rgba(239,68,68,0.55); }
 </style>
 </head>
 <body>
-<div class="page">
+<div class="panel">
+  <h1>🏈 NFL Scorebug Control</h1>
 
-  <div class="page-header">
-    <span>🏈</span>
-    <h1>NFL Scorebug Control</h1>
-  </div>
-
-  <!-- Connection -->
-  <div class="card">
-    <div class="card-label">Connection</div>
-    <div class="field-row">
-      <div class="field-label">Topic</div>
-      <input class="field-input" id="topicInput" type="text" placeholder="my-scorebug-topic" oninput="onTopicChange()"/>
+  <!-- Unique ID + OBS URL -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">Connection</div>
+      <button class="collapse-btn" id="conn-toggle" onclick="toggleConnection()">Hide</button>
     </div>
-    <div class="field-row">
-      <div class="url-row">
-        <div class="url-box" id="urlBox">Enter a topic above to generate the OBS URL</div>
-        <button class="copy-btn" onclick="copyObsUrl()">Copy</button>
+    <div class="collapsible" id="conn-body">
+      <div class="row">
+        <label>Unique ID</label>
+        <input type="text" id="topic-input" placeholder="e.g. jomboy-scorebug-x7k2" autocomplete="off" spellcheck="false">
+      </div>
+      <p class="hint">Create any ID you want — this is how the control page talks to OBS. Make it unique so it doesn't conflict with anyone else's scorebug.</p>
+      <div class="obs-url-box">
+        <span class="obs-url-text" id="obs-url-text">Enter a Unique ID above to generate your OBS URL</span>
+        <button class="copy-btn" id="copy-btn" onclick="copyUrl()">Copy</button>
       </div>
     </div>
   </div>
 
   <!-- Settings -->
-  <div class="card">
-    <div class="card-label">Settings</div>
-    <div class="settings-row">
-      <span class="settings-label">Refresh</span>
-      <select class="settings-select" id="rateSel" onchange="onRateChange()">
-        <option value="1000">Every 1s</option>
-        <option value="2000">Every 2s</option>
-        <option value="5000" selected>Every 5s</option>
-        <option value="10000">Every 10s</option>
-        <option value="15000">Every 15s</option>
-        <option value="30000">Every 30s</option>
-      </select>
-    </div>
-    <div class="settings-row">
-      <span class="settings-label">Delay</span>
-      <select class="settings-select" id="delaySel" onchange="onDelayChange()">
-        <option value="0">No delay</option>
+  <div class="section">
+    <div class="section-title">Settings</div>
+    <div class="row">
+      <label>Spoiler Delay</label>
+      <select id="delay-sel" onchange="saveAndPush()">
+        <option value="1000">1s</option>
         <option value="5000">5s</option>
         <option value="10000">10s</option>
         <option value="15000">15s</option>
@@ -105,262 +208,298 @@ body{background:#0d0d0d;color:#fff;font-family:'Barlow',sans-serif;min-height:10
         <option value="45000">45s</option>
       </select>
     </div>
+    <p class="hint">Delays score/play updates on stream so the bug doesn't spoil a play before you react to it.</p>
   </div>
 
-  <!-- Bug 1 -->
-  <div class="card">
-    <div class="bug-card-header">
-      <div class="bug-card-left">
-        <span class="bug-label">Bug 1</span>
-        <div class="status-row"><div class="sdot wait" id="sdot-0"></div><span class="status-text" id="stext-0">Connecting…</span></div>
+  <!-- Main game: the field bug -->
+  <div class="section">
+    <div class="bug-header">
+      <span class="bug-title">Main Game — Field</span>
+      <div class="bug-meta">
+        <div class="sdot" id="sdot-0"></div>
+        <span class="stext" id="stext-0">—</span>
+        <button class="toggle-btn" id="poss-toggle-0" onclick="togglePoss(0)">Poss</button>
+        <button class="toggle-btn" id="play-toggle-0" onclick="togglePlay()">Last Play</button>
       </div>
     </div>
-    <select class="game-select" id="game-sel-0" onchange="onGameChange(0)"><option value="">Loading…</option></select>
+    <select id="game-sel-0" onchange="saveAndPush()"><option value="">Loading…</option></select>
   </div>
 
-  <!-- Bug 2 -->
-  <div class="card">
-    <div class="bug-card-header">
-      <div class="bug-card-left">
-        <span class="bug-label">Bug 2</span>
-        <div class="status-row"><div class="sdot wait" id="sdot-1"></div><span class="status-text" id="stext-1">Connecting…</span></div>
+  <!-- Secondary game A -->
+  <div class="section">
+    <div class="bug-header">
+      <span class="bug-title">Secondary Game A</span>
+      <div class="bug-meta">
+        <div class="sdot" id="sdot-1"></div>
+        <span class="stext" id="stext-1">—</span>
+        <button class="toggle-btn" id="poss-toggle-1" onclick="togglePoss(1)">Poss</button>
+        <button class="toggle-btn" id="toggle-1" onclick="toggleBug(1)">Hide</button>
       </div>
-      <button class="hide-btn" id="toggle-1" onclick="toggleBug(1)">Hide</button>
     </div>
-    <select class="game-select" id="game-sel-1" onchange="onGameChange(1)"><option value="">Loading…</option></select>
+    <select id="game-sel-1" onchange="saveAndPush()"><option value="">Loading…</option></select>
   </div>
 
-  <!-- Bug 3 -->
-  <div class="card">
-    <div class="bug-card-header">
-      <div class="bug-card-left">
-        <span class="bug-label">Bug 3</span>
-        <div class="status-row"><div class="sdot wait" id="sdot-2"></div><span class="status-text" id="stext-2">Connecting…</span></div>
+  <!-- Secondary game B -->
+  <div class="section">
+    <div class="bug-header">
+      <span class="bug-title">Secondary Game B</span>
+      <div class="bug-meta">
+        <div class="sdot" id="sdot-2"></div>
+        <span class="stext" id="stext-2">—</span>
+        <button class="toggle-btn" id="poss-toggle-2" onclick="togglePoss(2)">Poss</button>
+        <button class="toggle-btn" id="toggle-2" onclick="toggleBug(2)">Hide</button>
       </div>
-      <button class="hide-btn" id="toggle-2" onclick="toggleBug(2)">Hide</button>
     </div>
-    <select class="game-select" id="game-sel-2" onchange="onGameChange(2)"><option value="">Loading…</option></select>
+    <select id="game-sel-2" onchange="saveAndPush()"><option value="">Loading…</option></select>
   </div>
 
-  <div id="pushStatus"></div>
+  <div class="push-status" id="push-status">—</div>
 </div>
 
 <script>
 const ESPN = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl';
-const DISPLAY_BASE = 'https://chrisgrimm-jm.github.io/NFL-Stream-Scorebug/display.html';
-let delayMs = 30000;
+
+firebase.initializeApp({
+  apiKey: 'AIzaSyBG2PS2muH4i27HefuLeBnZWW-TZ5dkMCw',
+  databaseURL: 'https://pinpoint-abf21-default-rtdb.firebaseio.com'
+});
+const _db = firebase.database();
+const fbKey = t => t.trim().replace(/[.#$\[\]\/\s]+/g, '-');
+const fbRef = topic => _db.ref(`nfl-scorebug/${fbKey(topic)}/state`);
+
 let allGames = [];
-const lastEvents = [null, null, null];
+let hiddenState = [false, false, false];
+let possHidden = [false, false, false];
+let playHidden = false;
+let pushTimer = null;
 
-function getTopic(){ return document.getElementById('topicInput').value.trim(); }
+// ── Restore saved settings ──
+const saved = JSON.parse(localStorage.getItem('nfl-scorebug-ctrl') || '{}');
+const topicInput = document.getElementById('topic-input');
+topicInput.value = saved.topic || '';
+if (saved.delay)      document.getElementById('delay-sel').value = saved.delay;
+if (saved.hidden)     hiddenState  = saved.hidden;
+if (saved.possHidden) possHidden   = saved.possHidden;
+if (saved.playHidden) playHidden   = saved.playHidden;
+if (saved.connCollapsed) {
+  document.getElementById('conn-body').classList.add('collapsed');
+  document.getElementById('conn-toggle').textContent = 'Show';
+}
+updateToggleButtons();
+updatePossToggles();
+updatePlayToggles();
+updateObsUrl();
 
-function onTopicChange(){
-  localStorage.setItem('nfl_topic', getTopic());
-  updateUrlBox();
+topicInput.addEventListener('input', () => {
+  const clean = topicInput.value.replace(/\s+/g, '-');
+  if (clean !== topicInput.value) topicInput.value = clean;
+  updateObsUrl(); saveAndPush();
+});
+
+function updateObsUrl() {
+  const topic = topicInput.value.trim();
+  const urlEl = document.getElementById('obs-url-text');
+  if (!topic) { urlEl.textContent = 'Enter a topic above to generate your OBS URL'; return; }
+  const base = location.origin + location.pathname.replace('control.html', 'display.html');
+  urlEl.textContent = `${base}?topic=${encodeURIComponent(topic)}&obs=1`;
 }
 
-function updateUrlBox(){
-  const topic = getTopic();
-  const box = document.getElementById('urlBox');
-  box.textContent = topic
-    ? DISPLAY_BASE + '?topic=' + encodeURIComponent(topic)
-    : 'Enter a topic above to generate the OBS URL';
+function copyUrl() {
+  const text = document.getElementById('obs-url-text').textContent;
+  if (!text.startsWith('http')) return;
+  navigator.clipboard.writeText(text);
+  const btn = document.getElementById('copy-btn');
+  btn.textContent = 'Copied!'; btn.classList.add('copied');
+  setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
 }
 
-function copyObsUrl(){
-  const topic = getTopic();
-  if(!topic){ alert('Enter a topic first.'); return; }
-  const url = DISPLAY_BASE + '?topic=' + encodeURIComponent(topic);
-  navigator.clipboard.writeText(url).then(()=>{
-    const btn = document.querySelector('.copy-btn');
-    const orig = btn.textContent;
-    btn.textContent = 'Copied!';
-    setTimeout(()=>{ btn.textContent = orig; }, 1500);
+function toggleBug(i) {
+  hiddenState[i] = !hiddenState[i];
+  updateToggleButtons();
+  saveAndPush();
+}
+function togglePoss(i) {
+  possHidden[i] = !possHidden[i];
+  updatePossToggles();
+  saveAndPush();
+}
+function togglePlay() {
+  playHidden = !playHidden;
+  updatePlayToggles();
+  saveAndPush();
+}
+
+function updatePossToggles() {
+  [0,1,2].forEach(i => {
+    const btn = document.getElementById(`poss-toggle-${i}`);
+    if (!btn) return;
+    btn.textContent = possHidden[i] ? 'Poss Off' : 'Poss';
+    btn.classList.toggle('hidden-state', possHidden[i]);
+  });
+}
+function updatePlayToggles() {
+  const btn = document.getElementById('play-toggle-0');
+  if (!btn) return;
+  btn.textContent = playHidden ? 'Last Play Off' : 'Last Play';
+  btn.classList.toggle('hidden-state', playHidden);
+}
+function updateToggleButtons() {
+  [1,2].forEach(i => {
+    const btn = document.getElementById(`toggle-${i}`);
+    if (!btn) return;
+    btn.textContent = hiddenState[i] ? 'Show' : 'Hide';
+    btn.classList.toggle('hidden-state', hiddenState[i]);
   });
 }
 
-async function publish(state){
-  const topic = getTopic();
-  if(!topic) return;
-  const el = document.getElementById('pushStatus');
-  try {
-    await fetch('https://ntfy.sh/' + topic, { method:'POST', body:JSON.stringify(state) });
-    el.className = 'ok';
-    el.textContent = 'Config pushed · ' + new Date().toLocaleTimeString();
-  } catch(e){
-    el.className = 'err';
-    el.textContent = 'Push failed · ' + e.message;
-  }
+function toggleConnection() {
+  const body = document.getElementById('conn-body');
+  const btn  = document.getElementById('conn-toggle');
+  const collapsed = body.classList.toggle('collapsed');
+  btn.textContent = collapsed ? 'Show' : 'Hide';
+  saveSettings();
 }
 
-(function(){
-  const t = localStorage.getItem('nfl_topic');
-  if(t){ document.getElementById('topicInput').value = t; updateUrlBox(); }
-})();
-
-function teamBg(t){ return '#' + (t.color || '1e2530'); }
-function teamText(t){
-  const hex = t.color || '1e2530';
-  const r=parseInt(hex.slice(0,2),16), g=parseInt(hex.slice(2,4),16), b=parseInt(hex.slice(4,6),16);
-  return (0.299*r+0.587*g+0.114*b) > 140 ? '#000' : '#fff';
-}
-function quarterLabel(period, statusName){
-  if(statusName==='STATUS_HALFTIME') return 'HT';
-  if(period<=4) return 'Q'+period;
-  if(period===5) return 'OT';
-  return (period-4)+'OT';
+function saveSettings() {
+  localStorage.setItem('nfl-scorebug-ctrl', JSON.stringify({
+    topic: topicInput.value.trim(),
+    delay: document.getElementById('delay-sel').value,
+    hidden: hiddenState,
+    possHidden,
+    playHidden,
+    games: [0,1,2].map(i => document.getElementById(`game-sel-${i}`).value),
+    connCollapsed: document.getElementById('conn-body').classList.contains('collapsed')
+  }));
 }
 
-const bugs = [0,1,2].map(i=>({idx:i, gameId:null, pollTimer:null, prev:{}, done:false, visible:true}));
-
-function setSt(idx, type, msg){
-  document.getElementById(`sdot-${idx}`).className = 'sdot' + (type==='ok' ? '' : ' '+type);
-  document.getElementById(`stext-${idx}`).textContent = msg;
+function saveAndPush() {
+  saveSettings();
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(pushConfig, 400);
 }
 
-async function apiFetch(url){ const r=await fetch(url); if(!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }
-
-async function loadSchedule(){
-  bugs.forEach(b=>setSt(b.idx,'wait','Loading…'));
-  try {
-    const data = await apiFetch(`${ESPN}/scoreboard`);
-    allGames = data.events || [];
-    if(!allGames.length){ bugs.forEach(b=>setSt(b.idx,'err','No games this week')); return; }
-    const live = allGames.filter(g=>g.competitions[0].status?.type?.state==='in');
-    const pool = live.length>=3 ? live : allGames;
-    [0,1,2].forEach(i=>{
-      const g = pool[i] || pool[0];
-      populateSelect(i, allGames, g.id);
-      watch(bugs[i], g.id);
-    });
-  } catch(e){ bugs.forEach(b=>setSt(b.idx,'err',e.message)); }
-}
-
-function populateSelect(i, games, selectedId){
-  const sel = document.getElementById(`game-sel-${i}`);
-  const cur = sel.value;
-  sel.innerHTML = '<option value="">— None —</option>';
-  games.forEach(g=>{
-    const comp = g.competitions[0];
-    const away = comp.competitors.find(c=>c.homeAway==='away');
-    const home = comp.competitors.find(c=>c.homeAway==='home');
-    const state = comp.status?.type?.description || 'Scheduled';
-    const opt = document.createElement('option');
-    opt.value = g.id;
-    opt.textContent = `${away?.team?.abbreviation||'?'} @ ${home?.team?.abbreviation||'?'} — ${state}`;
-    sel.appendChild(opt);
-  });
-  sel.value = selectedId || cur || '';
-}
-
-function onGameChange(i){
-  watch(bugs[i], document.getElementById(`game-sel-${i}`).value);
-}
-function onRateChange(){ bugs.forEach(b=>{ if(b.gameId) watch(b, b.gameId); }); }
-function onDelayChange(){ delayMs = parseInt(document.getElementById('delaySel').value) || 0; }
-
-function watch(bug, id){
-  bug.gameId = id || null; bug.prev = {}; bug.done = false;
-  clearInterval(bug.pollTimer);
-  if(!id) return;
-  poll(bug);
-  const rate = parseInt(document.getElementById('rateSel').value) || 5000;
-  bug.pollTimer = setInterval(()=>poll(bug), rate);
-}
-
-async function poll(bug){
-  if(!bug.gameId) return;
-  try {
-    const data = await apiFetch(`${ESPN}/scoreboard`);
-    allGames = data.events || [];
-    [0,1,2].forEach(i=>populateSelect(i, allGames, bugs[i].gameId));
-    const event = allGames.find(g=>g.id===bug.gameId);
-    if(!event){ setSt(bug.idx,'err','Game not found'); return; }
-    if(delayMs>0){
-      setTimeout(()=>{ lastEvents[bug.idx]=event; publishAll(); updateStatus(bug,event); }, delayMs);
-    } else {
-      lastEvents[bug.idx]=event; publishAll(); updateStatus(bug,event);
-    }
-  } catch(e){ setSt(bug.idx,'err',e.message); }
-}
-
-function updateStatus(bug, event){
-  const comp = event.competitions[0];
-  const status = comp.status || {};
-  const state = status.type?.state || 'pre';
-  const desc = status.type?.description || 'Scheduled';
-  if(state==='post'||status.type?.completed){
-    setSt(bug.idx,'ok','Final');
-    if(!bug.done){
-      bug.done=true; clearInterval(bug.pollTimer); bug.pollTimer=null;
-      setTimeout(()=>autoReplace(bug),10000);
-    }
-  } else if(state==='in'){
-    setSt(bug.idx,'ok',desc);
-  } else {
-    setSt(bug.idx,'wait',desc);
-  }
-}
-
-function serializeBug(bug, event){
-  if(!event) return { visible:bug.visible, empty:true };
-  const comp=event.competitions[0];
-  const away=comp.competitors.find(c=>c.homeAway==='away');
-  const home=comp.competitors.find(c=>c.homeAway==='home');
-  const status=comp.status||{}, sit=comp.situation||{};
-  const statusName=status.type?.name||'', state=status.type?.state||'pre';
-  const isFinal=state==='post'||status.type?.completed;
-  const isLive=state==='in', isHalftime=statusName==='STATUS_HALFTIME';
-  const awayScore=parseInt(away.score||'0',10), homeScore=parseInt(home.score||'0',10);
-  const downTxt=sit.shortDownDistanceText||'';
-  return {
-    visible:bug.visible,
-    awayAbbr:away.team.abbreviation, homeAbbr:home.team.abbreviation,
-    awayScore, homeScore,
-    awayBg:teamBg(away.team), homeBg:teamBg(home.team),
-    awayText:teamText(away.team), homeText:teamText(home.team),
-    quarterLabel:isFinal?'F':(isLive||isHalftime)?quarterLabel(status.period||1,statusName)
-      :(event.date?new Date(event.date).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'PRE'),
-    isFinal:!!isFinal, isLive:!!(isLive||isHalftime),
-    downText:(downTxt&&!isHalftime)?downTxt.toUpperCase():'',
-    possColor:(downTxt&&!isHalftime)?(sit.possession===home.team.id?teamBg(home.team):teamBg(away.team)):'',
+async function pushConfig() {
+  const topic = topicInput.value.trim();
+  if (!topic) return;
+  const cfg = {
+    games: [0,1,2].map(i => document.getElementById(`game-sel-${i}`).value || ''),
+    delay: parseInt(document.getElementById('delay-sel').value),
+    hidden: hiddenState,
+    possHidden,
+    playHidden
   };
+  const statusEl = document.getElementById('push-status');
+  try {
+    await fbRef(topic).set(cfg);
+    statusEl.textContent = `Config pushed · ${new Date().toLocaleTimeString()}`;
+    statusEl.className = 'push-status ok';
+  } catch(e) {
+    statusEl.textContent = `Push failed: ${e.message}`;
+    statusEl.className = 'push-status err';
+  }
 }
 
-function publishAll(){
-  publish({ ts:Date.now(), bugs:bugs.map((b,i)=>serializeBug(b,lastEvents[i])) });
+async function apiFetch(url) { const r = await fetch(url); if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }
+
+async function loadSchedule() {
+  try {
+    const data = await apiFetch(`${ESPN}/scoreboard`);
+    allGames = data.events || [];
+    if (!allGames.length) return;
+
+    const savedGames = (JSON.parse(localStorage.getItem('nfl-scorebug-ctrl') || '{}')).games || [];
+    const live = allGames.filter(g => g.competitions[0].status?.type?.state === 'in');
+    const notFinal = allGames.filter(g => !(g.competitions[0].status?.type?.state === 'post' || g.competitions[0].status?.type?.completed));
+    const pool = live.length >= 3 ? live : notFinal;
+
+    [0,1,2].forEach(i => {
+      const sel = document.getElementById(`game-sel-${i}`);
+      sel.innerHTML = '<option value="">— None —</option>';
+      allGames.forEach(g => {
+        const comp = g.competitions[0];
+        const away = comp.competitors.find(c => c.homeAway === 'away');
+        const home = comp.competitors.find(c => c.homeAway === 'home');
+        const isFinal = comp.status?.type?.state === 'post' || comp.status?.type?.completed;
+        const opt = document.createElement('option');
+        opt.value = g.id;
+        opt.textContent = `${away?.team?.abbreviation||'?'} @ ${home?.team?.abbreviation||'?'} — ${comp.status?.type?.description||'Scheduled'}`;
+        if (isFinal) opt.disabled = true;
+        sel.appendChild(opt);
+      });
+      const savedGame = savedGames[i] && allGames.find(g => g.id === savedGames[i]);
+      const savedIsFinal = savedGame && (savedGame.competitions[0].status?.type?.state === 'post' || savedGame.competitions[0].status?.type?.completed);
+      if (savedGame && !savedIsFinal) {
+        sel.value = savedGames[i];
+      } else {
+        const g = pool[i] || null;
+        sel.value = g ? g.id : '';
+      }
+      updateGameStatus(i);
+    });
+
+    saveAndPush();
+  } catch(e) { console.error(e); }
+
+  setInterval(async () => {
+    try {
+      const d = await apiFetch(`${ESPN}/scoreboard`);
+      allGames = d.events || [];
+    } catch(e) { console.error(e); }
+    [0,1,2].forEach(updateGameStatus);
+    refreshOptionStates();
+    checkForFinishedGame();
+  }, 30000);
 }
 
-function toggleBug(i){
-  bugs[i].visible = !bugs[i].visible;
-  const hidden = !bugs[i].visible;
-  const btn = document.getElementById(`toggle-${i}`);
-  btn.textContent = hidden ? 'Show' : 'Hide';
-  btn.classList.toggle('hidden-state', hidden);
-  publishAll();
+// Auto-reload when a selected game goes Final, with two guards:
+// 1. Wait out the spoiler delay first, so the bug doesn't change on
+//    stream before viewers have seen the final play.
+// 2. Never more than one auto-reload per 5 minutes, no matter what.
+let reloadPending = false;
+function checkForFinishedGame() {
+  if (reloadPending) return;
+  const selected = [0,1,2].map(i => document.getElementById(`game-sel-${i}`).value).filter(Boolean);
+  if (!selected.length) return;
+  const anyFinal = selected.some(id => {
+    const g = allGames.find(g => g.id === id);
+    return g && (g.competitions[0].status?.type?.state === 'post' || g.competitions[0].status?.type?.completed);
+  });
+  if (!anyFinal) return;
+
+  const lastReload = parseInt(localStorage.getItem('nfl-scorebug-last-reload') || '0');
+  if (Date.now() - lastReload < 5 * 60 * 1000) return;
+
+  reloadPending = true;
+  const spoilerDelay = parseInt(document.getElementById('delay-sel').value) || 30000;
+  setTimeout(() => {
+    localStorage.setItem('nfl-scorebug-last-reload', String(Date.now()));
+    location.reload();
+  }, spoilerDelay + 10000);
 }
 
-function autoReplace(bug){
-  if(!allGames.length) return;
-  const watchedIds=new Set(bugs.map(b=>b.gameId).filter(Boolean));
-  const candidates=allGames.filter(g=>!watchedIds.has(g.id));
-  if(!candidates.length) return;
-  const live=candidates.filter(g=>g.competitions[0].status?.type?.state==='in');
-  const pre=candidates.filter(g=>g.competitions[0].status?.type?.state==='pre');
-  const next=live[0]||pre[0]||candidates[0];
-  populateSelect(bug.idx, allGames, next.id);
-  watch(bug, next.id);
+function refreshOptionStates() {
+  [0,1,2].forEach(i => {
+    const sel = document.getElementById(`game-sel-${i}`);
+    sel.querySelectorAll('option').forEach(opt => {
+      const g = allGames.find(g => g.id === opt.value);
+      if (g) opt.disabled = g.competitions[0].status?.type?.state === 'post' || g.competitions[0].status?.type?.completed;
+    });
+  });
 }
 
-function schedule3amRefresh(){
-  const now=new Date(), next=new Date(now);
-  next.setHours(3,0,0,0);
-  if(next<=now) next.setDate(next.getDate()+1);
-  setTimeout(()=>{ loadSchedule(); setInterval(loadSchedule,24*60*60*1000); },next-now);
+function updateGameStatus(i) {
+  const id   = document.getElementById(`game-sel-${i}`).value;
+  const game = allGames.find(g => g.id === id);
+  const dot  = document.getElementById(`sdot-${i}`);
+  const txt  = document.getElementById(`stext-${i}`);
+  if (!game) { dot.className = 'sdot'; txt.textContent = '—'; return; }
+  const status = game.competitions[0].status?.type || {};
+  const isFinal = status.state === 'post' || status.completed;
+  dot.className = 'sdot ' + (status.state === 'in' ? 'live' : isFinal ? 'final' : 'pre');
+  txt.textContent = status.description || 'Scheduled';
 }
 
 loadSchedule();
-schedule3amRefresh();
 </script>
 </body>
 </html>
