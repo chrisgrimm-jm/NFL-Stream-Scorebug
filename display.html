@@ -200,10 +200,11 @@ function renderMain(event){
   const ezAway = document.getElementById('ez-away');
   const ezHome = document.getElementById('ez-home');
 
-  const hasSit = !isFinal && !isHalftime && sit.yardLine != null && sit.down;
+  const possIsAway = sit.possession === away.team.id;
+  const possIsHome = sit.possession === home.team.id;
+  const hasSit = !isFinal && !isHalftime && sit.yardLine != null && sit.down && (possIsAway || possIsHome);
   if(hasSit && !possHidden[0]){
     downEl.textContent = (sit.shortDownDistanceText||'').toUpperCase();
-    const possIsAway = sit.possession === away.team.id;
     const ballYards = sit.yardLine;
     const fdYards = Math.min(sit.yardLine + (sit.distance||0), 100);
     const toPct = y => possIsAway ? y : 100 - y;
