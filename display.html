@@ -11,6 +11,7 @@ html,body{margin:0;padding:0;background:transparent;width:100%;height:100%;overf
 *{box-sizing:border-box;}
 
 .stage{position:fixed;bottom:40px;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:26px;font-family:'Barlow',sans-serif;font-weight:700;}
+.mini-stack{display:flex;flex-direction:column;gap:14px;}
 
 /* ───────── Main bug: football field ───────── */
 .field-wrap{display:flex;flex-direction:column;align-items:center;gap:8px;opacity:0;transform:translateY(10px);transition:opacity .4s ease,transform .4s ease;}
@@ -79,7 +80,6 @@ html,body{margin:0;padding:0;background:transparent;width:100%;height:100%;overf
 <body>
 
 <div class="stage" id="stage">
-  <div class="mini-wrap" id="mini-wrap-1"></div>
   <div class="field-wrap" id="field-wrap">
     <div class="field-stack">
       <div class="play-bar" id="play-bar"></div>
@@ -105,7 +105,10 @@ html,body{margin:0;padding:0;background:transparent;width:100%;height:100%;overf
       </div>
     </div>
   </div>
-  <div class="mini-wrap" id="mini-wrap-2"></div>
+  <div class="mini-stack">
+    <div class="mini-wrap" id="mini-wrap-1"></div>
+    <div class="mini-wrap" id="mini-wrap-2"></div>
+  </div>
 </div>
 
 <script>
