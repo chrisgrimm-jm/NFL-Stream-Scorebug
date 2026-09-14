@@ -19,6 +19,7 @@ html,body{margin:0;padding:0;background:transparent;width:100%;height:100%;overf
 .field-hud{position:relative;z-index:2;background:#0d0d0d;color:#fff;border-radius:5px;padding:5px 16px;display:flex;align-items:center;gap:10px;white-space:nowrap;box-shadow:0 3px 8px rgba(0,0,0,.5);}
 .field-quarter{font-size:16px;font-weight:900;}
 .field-down{font-size:13px;font-weight:800;color:#ffd60a;text-transform:uppercase;}
+.field-clock{font-size:15px;font-weight:700;color:rgba(255,255,255,.75);}
 
 .field-bar{display:flex;align-items:stretch;height:96px;width:760px;border-radius:6px;filter:drop-shadow(0 4px 14px rgba(0,0,0,.7));position:relative;}
 
@@ -84,6 +85,7 @@ html,body{margin:0;padding:0;background:transparent;width:100%;height:100%;overf
       <div class="play-bar" id="play-bar"></div>
       <div class="field-hud">
         <span class="field-quarter" id="field-quarter">—</span>
+        <span class="field-clock" id="field-clock"></span>
         <span class="field-down" id="field-down"></span>
       </div>
       <div class="field-bar" id="field-bar">
@@ -190,6 +192,7 @@ function renderMain(event){
   document.getElementById('field-quarter').textContent = isFinal ? 'FINAL'
     : (isLive||isHalftime) ? quarterLabel(status.period||1, statusName)
     : (event.date ? new Date(event.date).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}) : 'PRE');
+  document.getElementById('field-clock').textContent = isLive ? (status.displayClock || '') : '';
 
   const downEl = document.getElementById('field-down');
   const ball = document.getElementById('ball');
