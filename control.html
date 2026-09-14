@@ -222,27 +222,7 @@ select option:disabled { color: rgba(255,255,255,0.2); }
         <button class="toggle-btn" id="play-toggle-0" onclick="togglePlay()">Last Play</button>
       </div>
     </div>
-    <select id="game-sel-0" onchange="onMainGameChange()"><option value="">Loading…</option></select>
-  </div>
-
-  <!-- Game Replay: step through any past game's plays on the main field bug -->
-  <div class="section">
-    <div class="section-title">Game Replay</div>
-    <div class="row">
-      <label>Date</label>
-      <input type="date" id="replay-date">
-      <button class="toggle-btn" onclick="loadReplayGames()">Load Games</button>
-    </div>
-    <div class="row">
-      <select id="replay-game-sel" onchange="onReplayGameChange()"><option value="">— Pick a date and load —</option></select>
-    </div>
-    <div class="row" id="replay-controls" style="display:none">
-      <button class="toggle-btn" onclick="replayStep(-1)">◀ Prev</button>
-      <button class="toggle-btn" id="replay-play-btn" onclick="toggleReplayAutoplay()">▶ Play</button>
-      <button class="toggle-btn" onclick="replayStep(1)">Next ▶</button>
-      <button class="toggle-btn" onclick="exitReplay()">Exit Replay</button>
-    </div>
-    <p class="hint" id="replay-status"></p>
+    <select id="game-sel-0" onchange="saveAndPush()"><option value="">Loading…</option></select>
   </div>
 
   <!-- Secondary game A -->
@@ -292,137 +272,6 @@ let hiddenState = [false, false, false];
 let possHidden = [false, false, false];
 let playHidden = false;
 let pushTimer = null;
-
-// ── Game Replay: step through any past game's plays on the main field bug ──
-let replayGames = [];
-let replayPlays = [];
-let replayIdx = 0;
-let replayAway = null, replayHome = null;
-let replayEvent = null;
-let replayActive = false;
-let replayAutoTimer = null;
-
-document.getElementById('replay-date').valueAsDate = new Date();
-
-async function loadReplayGames() {
-  const dateStr = document.getElementById('replay-date').value.replace(/-/g, '');
-  if (!dateStr) return;
-  const sel = document.getElementById('replay-game-sel');
-  sel.innerHTML = '<option value="">Loading…</option>';
-  try {
-    const data = await apiFetch(`${ESPN}/scoreboard?dates=${dateStr}`);
-    replayGames = data.events || [];
-    sel.innerHTML = '<option value="">— Pick a game —</option>';
-    replayGames.forEach(g => {
-      const comp = g.competitions[0];
-      const away = comp.competitors.find(c => c.homeAway === 'away');
-      const home = comp.competitors.find(c => c.homeAway === 'home');
-      const opt = document.createElement('option');
-      opt.value = g.id;
-      opt.textContent = `${away?.team?.abbreviation||'?'} @ ${home?.team?.abbreviation||'?'} — ${comp.status?.type?.description||''}`;
-      sel.appendChild(opt);
-    });
-    if (!replayGames.length) sel.innerHTML = '<option value="">No games that day</option>';
-  } catch(e) {
-    sel.innerHTML = `<option value="">Failed: ${e.message}</option>`;
-  }
-}
-
-async function onReplayGameChange() {
-  const id = document.getElementById('replay-game-sel').value;
-  if (!id) return;
-  const statusEl = document.getElementById('replay-status');
-  statusEl.textContent = 'Loading plays…';
-  try {
-    const data = await apiFetch(`${ESPN}/summary?event=${id}`);
-    const competitors = data.header.competitions[0].competitors;
-    replayAway = competitors.find(c => c.homeAway === 'away').team;
-    replayHome = competitors.find(c => c.homeAway === 'home').team;
-    const drives = data.drives?.previous || [];
-    replayPlays = drives.flatMap(d => d.plays || []);
-    if (!replayPlays.length) { statusEl.textContent = 'No play-by-play available for this game.'; return; }
-    replayIdx = 0;
-    replayActive = true;
-    document.getElementById('replay-controls').style.display = 'flex';
-    pushReplayFrame();
-  } catch(e) {
-    statusEl.textContent = `Failed to load plays: ${e.message}`;
-  }
-}
-
-// ESPN's play-by-play measures yardLine as distance-to-opponent's-goal,
-// the opposite convention from the live scoreboard's situation.yardLine
-// (distance from the possessing team's OWN goal) that the field bug's
-// renderer expects — hence the 100-minus flip below.
-function buildSyntheticEvent(play) {
-  const e = play.end || play.start || {};
-  const down = e.down;
-  const possId = e.team?.id;
-  const situation = (down >= 1 && possId) ? {
-    down,
-    distance: e.distance,
-    yardLine: 100 - (e.yardsToEndzone ?? e.yardLine ?? 50),
-    shortDownDistanceText: e.shortDownDistanceText || '',
-    possession: possId,
-    lastPlay: { text: play.text || '' }
-  } : { lastPlay: { text: play.text || '' } };
-  return {
-    date: new Date().toISOString(),
-    competitions: [{
-      status: { type: { state: 'in', completed: false, name: 'STATUS_IN_PROGRESS', description: 'In Progress' }, period: play.period?.number || 1 },
-      competitors: [
-        { homeAway: 'away', team: replayAway, score: String(play.awayScore ?? 0) },
-        { homeAway: 'home', team: replayHome, score: String(play.homeScore ?? 0) }
-      ],
-      situation
-    }]
-  };
-}
-
-function pushReplayFrame() {
-  replayEvent = buildSyntheticEvent(replayPlays[replayIdx]);
-  const p = replayPlays[replayIdx];
-  document.getElementById('replay-status').textContent =
-    `Play ${replayIdx+1} of ${replayPlays.length} — Q${p.period?.number||'?'} ${p.clock?.displayValue||''} — ${p.text||''}`;
-  saveAndPush();
-}
-
-function replayStep(delta) {
-  if (!replayPlays.length) return;
-  replayIdx = Math.max(0, Math.min(replayPlays.length-1, replayIdx + delta));
-  pushReplayFrame();
-}
-
-function toggleReplayAutoplay() {
-  const btn = document.getElementById('replay-play-btn');
-  if (replayAutoTimer) {
-    clearInterval(replayAutoTimer);
-    replayAutoTimer = null;
-    btn.textContent = '▶ Play';
-  } else {
-    btn.textContent = '⏸ Pause';
-    replayAutoTimer = setInterval(() => {
-      if (replayIdx >= replayPlays.length-1) { toggleReplayAutoplay(); return; }
-      replayStep(1);
-    }, 2500);
-  }
-}
-
-function exitReplay() {
-  if (replayAutoTimer) { clearInterval(replayAutoTimer); replayAutoTimer = null; }
-  replayActive = false;
-  replayEvent = null;
-  document.getElementById('replay-controls').style.display = 'none';
-  document.getElementById('replay-status').textContent = '';
-  document.getElementById('replay-game-sel').value = '';
-  document.getElementById('replay-play-btn').textContent = '▶ Play';
-  saveAndPush();
-}
-
-function onMainGameChange() {
-  if (replayActive) exitReplay();
-  saveAndPush();
-}
 
 // ── Restore saved settings ──
 const saved = JSON.parse(localStorage.getItem('nfl-scorebug-ctrl') || '{}');
@@ -537,8 +386,7 @@ async function pushConfig() {
     delay: parseInt(document.getElementById('delay-sel').value),
     hidden: hiddenState,
     possHidden,
-    playHidden,
-    replay: replayActive ? replayEvent : null
+    playHidden
   };
   const statusEl = document.getElementById('push-status');
   try {

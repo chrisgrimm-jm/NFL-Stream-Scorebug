@@ -152,7 +152,7 @@ function flashEl(el){ el.classList.remove('flash'); void el.offsetWidth; el.clas
   }
 })();
 
-const mainBug = { gameId:null, prev:{}, done:false, firstRender:true, lastPlayText:'', replayMode:false };
+const mainBug = { gameId:null, prev:{}, done:false, firstRender:true, lastPlayText:'' };
 let playPopTimer = null;
 function triggerPlayPopup(text){
   const bar = document.getElementById('play-bar');
@@ -237,7 +237,7 @@ function renderMain(event){
 
   if(isFinal && !mainBug.done){
     mainBug.done = true;
-    if(!mainBug.replayMode) setTimeout(()=>autoReplaceMain(), 10000);
+    setTimeout(()=>autoReplaceMain(), 10000);
   }
 }
 
@@ -333,7 +333,7 @@ async function pollAll(){
     const data = await apiFetch(`${ESPN}/scoreboard`);
     allGames = data.events || [];
 
-    if(!mainBug.replayMode && mainBug.gameId){
+    if(mainBug.gameId){
       const event = allGames.find(g=>g.id===mainBug.gameId);
       if(event){
         const useDelay = delayMs>0 && !mainBug.firstRender;
@@ -378,14 +378,6 @@ function autoReplaceMini(bug){
 
 function applyConfig(cfg){
   if(typeof cfg.delay === 'number') delayMs = cfg.delay;
-
-  if(cfg.replay){
-    mainBug.replayMode = true;
-    renderMain(cfg.replay);
-  } else {
-    mainBug.replayMode = false;
-  }
-
   if(Array.isArray(cfg.games)){
     if((cfg.games[0]||null) !== mainBug.gameId) watchMain(cfg.games[0]||null);
     miniBugs.forEach((bug,idx)=>{
