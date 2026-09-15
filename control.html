@@ -179,6 +179,8 @@ select option:disabled { color: rgba(255,255,255,0.2); }
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   font-size: 11px; color: rgba(255,255,255,0.25); text-align: center; padding: 0 20px;
 }
+.preview-drag { position: absolute; inset: 0; cursor: grab; }
+.preview-drag.dragging { cursor: grabbing; }
 </style>
 </head>
 <body>
@@ -272,7 +274,9 @@ select option:disabled { color: rgba(255,255,255,0.2); }
     <div class="preview-box" id="preview-box">
       <iframe id="preview-frame" src="about:blank"></iframe>
       <div class="preview-empty" id="preview-empty">Enter a Unique ID and pick a game to preview</div>
+      <div class="preview-drag" id="preview-drag" title="Drag to reposition"></div>
     </div>
+    <p class="hint">Drag the preview to move the bug, or use the fields below.</p>
   </div>
 
   <div class="section">
@@ -363,6 +367,39 @@ function scalePreview() {
   previewFrame.style.transform = `scale(${previewBox.clientWidth / 1920})`;
 }
 window.addEventListener('resize', scalePreview);
+
+// ── Drag the preview to move the bug ──
+const previewDrag = document.getElementById('preview-drag');
+let dragState = null;
+let lastDragPushAt = 0;
+previewDrag.addEventListener('mousedown', e => {
+  e.preventDefault();
+  dragState = {
+    startX: e.clientX, startY: e.clientY,
+    startOffX: parseInt(offxSel.value) || 0, startOffY: parseInt(offySel.value) || 0,
+    scale: previewBox.clientWidth / 1920
+  };
+  previewDrag.classList.add('dragging');
+  document.addEventListener('mousemove', onPreviewDrag);
+  document.addEventListener('mouseup', endPreviewDrag);
+});
+function onPreviewDrag(e) {
+  if (!dragState) return;
+  const dx = (e.clientX - dragState.startX) / dragState.scale;
+  const dy = (e.clientY - dragState.startY) / dragState.scale;
+  offxSel.value = Math.round(dragState.startOffX + dx);
+  offySel.value = Math.round(dragState.startOffY + dy);
+  saveSettings();
+  const now = Date.now();
+  if (now - lastDragPushAt > 80) { lastDragPushAt = now; pushConfig(); }
+}
+function endPreviewDrag() {
+  document.removeEventListener('mousemove', onPreviewDrag);
+  document.removeEventListener('mouseup', endPreviewDrag);
+  previewDrag.classList.remove('dragging');
+  dragState = null;
+  saveAndPush();
+}
 
 function updatePreview() {
   const topic = topicInput.value.trim();
