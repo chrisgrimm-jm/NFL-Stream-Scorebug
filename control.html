@@ -59,7 +59,7 @@ label {
   min-width: 56px;
   flex-shrink: 0;
 }
-select, input[type="text"] {
+select, input[type="text"], input[type="number"] {
   background: rgba(255,255,255,0.06);
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 4px;
@@ -165,6 +165,20 @@ select option:disabled { color: rgba(255,255,255,0.2); }
 }
 .push-status.ok { color: rgba(34,197,94,0.55); }
 .push-status.err { color: rgba(239,68,68,0.55); }
+
+.preview-box {
+  position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden;
+  border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);
+  background: repeating-conic-gradient(#171b24 0% 25%, #12151c 0% 50%) 50% / 28px 28px;
+}
+.preview-box iframe {
+  position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; border: 0;
+  transform-origin: top left; pointer-events: none;
+}
+.preview-empty {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: rgba(255,255,255,0.25); text-align: center; padding: 0 20px;
+}
 </style>
 </head>
 <body>
@@ -253,6 +267,32 @@ select option:disabled { color: rgba(255,255,255,0.2); }
     <select id="game-sel-2" onchange="saveAndPush()"><option value="">Loading…</option></select>
   </div>
 
+  <div class="section">
+    <div class="section-title">Preview</div>
+    <div class="preview-box" id="preview-box">
+      <iframe id="preview-frame" src="about:blank"></iframe>
+      <div class="preview-empty" id="preview-empty">Enter a Unique ID and pick a game to preview</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Position &amp; Size</div>
+    <div class="row">
+      <label>Scale</label>
+      <input type="number" id="scale-sel" value="100" min="25" max="300" step="5">
+    </div>
+    <div class="row">
+      <label>Move X</label>
+      <input type="number" id="offx-sel" value="0" step="5">
+    </div>
+    <div class="row">
+      <label>Move Y</label>
+      <input type="number" id="offy-sel" value="0" step="5">
+    </div>
+    <p class="hint">Scale (%) and pixel offset from the default bottom-center position. Scales from the bottom edge.</p>
+    <button class="copy-btn" id="reset-pos-btn" style="margin-top:10px;">Reset to default</button>
+  </div>
+
   <div class="push-status" id="push-status">—</div>
 </div>
 
@@ -285,15 +325,30 @@ if (saved.connCollapsed) {
   document.getElementById('conn-body').classList.add('collapsed');
   document.getElementById('conn-toggle').textContent = 'Show';
 }
+const scaleSel = document.getElementById('scale-sel');
+const offxSel = document.getElementById('offx-sel');
+const offySel = document.getElementById('offy-sel');
+const previewBox = document.getElementById('preview-box');
+const previewFrame = document.getElementById('preview-frame');
+const previewEmpty = document.getElementById('preview-empty');
+if (saved.scale)   scaleSel.value = saved.scale;
+if (saved.offsetX) offxSel.value  = saved.offsetX;
+if (saved.offsetY) offySel.value  = saved.offsetY;
 updateToggleButtons();
 updatePossToggles();
 updatePlayToggles();
 updateObsUrl();
+updatePreview();
 
 topicInput.addEventListener('input', () => {
   const clean = topicInput.value.replace(/\s+/g, '-');
   if (clean !== topicInput.value) topicInput.value = clean;
-  updateObsUrl(); saveAndPush();
+  updateObsUrl(); updatePreview(); saveAndPush();
+});
+[scaleSel, offxSel, offySel].forEach(el => el.addEventListener('input', saveAndPush));
+document.getElementById('reset-pos-btn').addEventListener('click', () => {
+  scaleSel.value = 100; offxSel.value = 0; offySel.value = 0;
+  saveAndPush();
 });
 
 function updateObsUrl() {
@@ -302,6 +357,21 @@ function updateObsUrl() {
   if (!topic) { urlEl.textContent = 'Enter a topic above to generate your OBS URL'; return; }
   const base = location.origin + location.pathname.replace('control.html', 'display.html');
   urlEl.textContent = `${base}?topic=${encodeURIComponent(topic)}&obs=1`;
+}
+
+function scalePreview() {
+  previewFrame.style.transform = `scale(${previewBox.clientWidth / 1920})`;
+}
+window.addEventListener('resize', scalePreview);
+
+function updatePreview() {
+  const topic = topicInput.value.trim();
+  previewEmpty.style.display = topic ? 'none' : 'flex';
+  if (!topic) { previewFrame.src = 'about:blank'; return; }
+  const base = location.origin + location.pathname.replace('control.html', 'display.html');
+  const src = `${base}?topic=${encodeURIComponent(topic)}&obs=1`;
+  if (previewFrame.src !== src) previewFrame.src = src;
+  scalePreview();
 }
 
 function copyUrl() {
@@ -367,6 +437,9 @@ function saveSettings() {
     hidden: hiddenState,
     possHidden,
     playHidden,
+    scale: scaleSel.value,
+    offsetX: offxSel.value,
+    offsetY: offySel.value,
     games: [0,1,2].map(i => document.getElementById(`game-sel-${i}`).value),
     connCollapsed: document.getElementById('conn-body').classList.contains('collapsed')
   }));
@@ -386,7 +459,10 @@ async function pushConfig() {
     delay: parseInt(document.getElementById('delay-sel').value),
     hidden: hiddenState,
     possHidden,
-    playHidden
+    playHidden,
+    scale: parseInt(scaleSel.value) || 100,
+    offsetX: parseInt(offxSel.value) || 0,
+    offsetY: parseInt(offySel.value) || 0
   };
   const statusEl = document.getElementById('push-status');
   try {
